@@ -5,7 +5,7 @@
  */
 window.SEISEKI_CONFIG = {
   API_URL: {
-    prod: ''   // 본판은 아직 없음 — 전환할 때 서울 서버 주소를 넣음,
+    prod: '',   // 본판은 아직 없음 — 전환할 때 서울 서버 주소를 넣음
     dev: 'https://kzgjmpckgqfabyiphskg.supabase.co/functions/v1/api'   // Supabase 서울 (개발)
   }
 };
