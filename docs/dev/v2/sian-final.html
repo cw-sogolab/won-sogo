@@ -1,0 +1,1332 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>최종 시안 · 클레이 + 보상 포스터</title>
+<script>
+/* 테마: ?theme=light|dark → 저장한 선택 → 기기 설정(prefers-color-scheme) 순 */
+(function(){
+  var t = null;
+  try { t = new URLSearchParams(location.search).get('theme'); } catch (e) {}
+  if (t !== 'light' && t !== 'dark') { try { t = localStorage.getItem('sianFinalTheme'); } catch (e) { t = null; } }
+  if (t !== 'light' && t !== 'dark') t = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', t);
+})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Anton&family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<style>
+/* ════ 색 토큰 — 라이트(기본) · 다크 ════ */
+:root{
+  color-scheme:light;
+  --bg:#F3F2FA; --card:#fff; --ink:#1E1B3A; --sub:#6B6885; --body:#4B4868; --line:#ECEAF6; --line2:#F1F0F7; --track:#E9E7F4; --soft:#F5F4FA; --hover:#F6F5FF; --tabtx:#77748F;
+  --lav:#BDAEFF; --peach:#FFBFA3; --mint:#A3ECCF; --sky:#ABD9FF; --butter:#FFE582;
+  --pt:#5B5BFF; --pt-d:#3F3FD6; --pt-l:#ECEBFF; --ok:#0F7A55; --ok-l:#DDF8EC; --ok-bg:#E8FBF3; --gold:#FFB81F; --star:#B26F00;
+  --ing-b:#FFF1BF; --ing-t:#7A4E00; --yet-b:#EDEBF6; --yet-t:#5F5C7A; --no-b:#FFE3DE; --no-t:#B92D1A; --warn:#D9432E;
+  --tag-b:#E3F3FF; --tag-t:#1D5FA8; --chip-b:#FFE9EE; --chip-t:#C2264B;
+  --hero:radial-gradient(circle at 86% 14%,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 34%),linear-gradient(165deg,#ECE6FF 0%,#DCEAFF 100%);
+  --tile:linear-gradient(160deg,#F1EDFF,#DCD3FF); --tile-sh:inset 0 -4px 6px rgba(91,67,201,.16),inset 0 3px 3px rgba(255,255,255,.9);
+  --bezel:#fff; --bezel-o:#E3E0F2; --chrome:#F8F7FD; --glass:rgba(255,255,255,.88);
+  --ped:radial-gradient(ellipse at 38% 26%,#fff 0,#F4F1FF 55%,#DDD6FA 100%); --ped-s:#CEC6F4;
+  --no-ball:radial-gradient(circle at 34% 26%,#fff 0,#EFEDF7 50%,#D9D5EA 100%); --no-ball-s:#C9C4DF;
+  --lock-ball:radial-gradient(circle at 34% 26%,#fff 0,#F0EEF8 45%,#DAD6EA 100%); --lock-s:#C4BFDB; --lock-t:#77748F;
+  --road-edge:#D6D0EE; --road:#fff; --road-dot:#DAD6EA; --avg:#A9A5C4;
+  --sh:0 18px 36px -14px rgba(76,62,160,.24),0 4px 10px -6px rgba(76,62,160,.12);
+  --sh-s:0 10px 22px -12px rgba(76,62,160,.28),0 2px 6px -3px rgba(76,62,160,.10);
+  --sh-big:0 54px 70px -32px rgba(76,62,160,.42),0 22px 30px -18px rgba(76,62,160,.2);
+  /* 보상 순간(J): 인디고 · 라임 · 핑크 · 검은 낙서 */
+  --j-bg:#4A3AFF; --j-bg-d:#2B1EC2; --j-lime:#C6F432; --j-lime-d:#7A9C00; --j-pink:#FF6AD5; --j-ink:#0B0B14;
+  --spring:cubic-bezier(.3,1.45,.5,1);
+  --f:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Hiragino Sans",sans-serif;
+  --fn:"M PLUS Rounded 1c","Pretendard Variable",Pretendard,"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --f-an:"Anton","Bebas Neue",Impact,"Arial Narrow",sans-serif;
+  --f-han:"Black Han Sans","Pretendard Variable",Pretendard,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121120; --card:#1E1C31; --ink:#F2F1FA; --sub:#A9A6C6; --body:#CFCDE3; --line:#2D2B46; --line2:#272540; --track:#2B2945; --soft:#18172A; --hover:#26243F; --tabtx:#9693B3;
+  --pt:#7C7CFF; --pt-d:#B9B9FF; --pt-l:#2B2A5E; --ok:#5FDFAA; --ok-l:#123B2D; --ok-bg:#132D27; --star:#FFC94D;
+  --ing-b:#3A3114; --ing-t:#FFD66B; --yet-b:#2A2842; --yet-t:#B9B6D3; --no-b:#41201C; --no-t:#FF9B8A; --warn:#FF7A66;
+  --tag-b:#1C3550; --tag-t:#9CCBFF; --chip-b:#4A1D2B; --chip-t:#FFA3BC;
+  --hero:radial-gradient(circle at 86% 14%,rgba(170,160,255,.20) 0,rgba(170,160,255,0) 34%),linear-gradient(165deg,#2A2552 0%,#1C2846 100%);
+  --tile:linear-gradient(160deg,#352F66,#27224E); --tile-sh:inset 0 -4px 6px rgba(0,0,0,.3),inset 0 3px 3px rgba(255,255,255,.08);
+  --bezel:#26243B; --bezel-o:#36344F; --chrome:#1A1930; --glass:rgba(30,28,49,.88);
+  --ped:radial-gradient(ellipse at 38% 26%,#4D477C 0,#383264 55%,#28234C 100%); --ped-s:#1A1736;
+  --no-ball:radial-gradient(circle at 34% 26%,#4A4768 0,#363452 50%,#28263F 100%); --no-ball-s:#141326;
+  --lock-ball:radial-gradient(circle at 34% 26%,#555277 0,#3D3A5E 45%,#2C2A47 100%); --lock-s:#141326; --lock-t:#B9B6D3;
+  --road-edge:#0D0C19; --road:#2A2843; --road-dot:#4A4770; --avg:#7A7799;
+  --sh:0 18px 36px -14px rgba(0,0,0,.65),0 4px 10px -6px rgba(0,0,0,.45);
+  --sh-s:0 10px 22px -12px rgba(0,0,0,.7),0 2px 6px -3px rgba(0,0,0,.4);
+  --sh-big:0 54px 70px -32px rgba(0,0,0,.75),0 22px 30px -18px rgba(0,0,0,.5);
+  --j-bg:#3626E0; --j-bg-d:#1C1290;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f);font-weight:600;-webkit-font-smoothing:antialiased;word-break:keep-all;transition:background .25s,color .25s}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+p{margin:0}
+.num{font-family:var(--fn);font-weight:800;letter-spacing:-.01em}
+.ja{font-family:var(--fn);font-weight:800}
+.ic{display:inline-block;width:20px;height:20px;flex:none}
+.ic svg,.ch svg{display:block;width:100%;height:auto}
+.ic svg{height:100%;overflow:visible}
+.th-fill{fill:var(--ink)} .th-card{fill:var(--card)} .th-sub{fill:var(--sub)}
+
+/* ── 페이지 머리 ── */
+.top{padding:36px 34px 4px;max-width:2240px;margin:0 auto}
+.topline{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.top .tag{display:inline-block;background:var(--card);color:var(--pt);font-weight:800;font-size:12.5px;padding:8px 14px;border-radius:999px;box-shadow:var(--sh-s)}
+.theme{display:inline-flex;gap:2px;background:var(--card);border-radius:999px;padding:4px;box-shadow:var(--sh-s)}
+.theme button{height:34px;padding:0 15px;border-radius:999px;font-size:13.5px;font-weight:800;color:var(--sub);display:inline-flex;align-items:center;gap:6px}
+.theme button svg{width:16px;height:16px}
+.theme button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.top h1{font-weight:800;font-size:clamp(34px,6.2vw,72px);line-height:1.08;margin:18px 0 14px;letter-spacing:-.035em}
+.top h1 em{font-style:normal;font-family:var(--f-han);font-weight:400;letter-spacing:-.01em;color:var(--j-bg)}
+:root[data-theme="dark"] .top h1 em{color:var(--j-lime)}
+.top p{max-width:780px;font-size:16px;line-height:1.65;color:var(--body)}
+.swatches{display:flex;flex-wrap:wrap;gap:8px;margin:20px 0 0}
+.swatches span{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 14px 6px 7px;font-size:13px;font-weight:700;background:var(--card);box-shadow:var(--sh-s)}
+.swatches span.fnt{padding-left:14px}
+.swatches span.jj{background:var(--j-bg);color:#fff}
+.swatches i{width:22px;height:22px;border-radius:50%;display:block;box-shadow:inset -2px -3px 4px rgba(40,30,120,.22),inset 2px 2px 3px rgba(255,255,255,.7)}
+.rule{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;max-width:1100px;margin:22px 0 0}
+.rule div{background:var(--card);border-radius:20px;padding:14px 16px;box-shadow:var(--sh-s);font-size:13.5px;line-height:1.55;color:var(--body)}
+.rule b{display:block;font-size:15px;color:var(--ink);margin-bottom:2px}
+.rule div.j{background:var(--j-bg);color:#E9E6FF}
+.rule div.j b{color:var(--j-lime);font-family:var(--f-han);font-weight:400;font-size:17px}
+.sec{max-width:2240px;margin:0 auto;padding:36px 34px 0;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.sec h2{margin:0;font-size:24px;font-weight:800;letter-spacing:-.02em}
+.sec span{font-size:13.5px;color:var(--sub)}
+.sec .swipe{display:none;font-size:12.5px;font-weight:800;color:var(--pt);background:var(--card);border-radius:999px;padding:4px 11px;box-shadow:var(--sh-s)}
+.sec.ovf .swipe{display:inline-block}
+.row{display:flex;gap:40px;overflow-x:auto;padding:22px 34px 84px;max-width:2240px;margin:0 auto;scroll-snap-type:x proximity}
+.col{flex:none;scroll-snap-align:center}
+.col h3{font-size:18px;font-weight:800;margin:0 0 4px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.col h3 b{display:inline-grid;place-items:center;width:26px;height:26px;border-radius:9px;background:var(--pt);color:#fff;font:800 14px var(--fn);box-shadow:inset 0 -3px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.col h3 small{font-size:11.5px;font-weight:800;background:var(--chip-b);color:var(--chip-t);border-radius:999px;padding:3px 9px}
+.col h3 .md{font-size:11px;font-weight:800;border-radius:999px;padding:3px 9px;background:var(--pt-l);color:var(--pt-d)}
+.col h3 .md.j{background:var(--j-bg);color:var(--j-lime)}
+.col h3 b.jn{background:var(--j-bg);color:var(--j-lime);font-family:var(--f-an);font-weight:400;border-radius:50%;box-shadow:none}
+.col .note{font-size:13px;color:var(--sub);margin:0 0 20px;max-width:340px;line-height:1.5;min-height:40px}
+.foot{max-width:2240px;margin:0 auto;padding:0 34px 64px;font-size:14px;color:var(--sub);line-height:1.7}
+
+/* ── 휴대폰 틀 ── */
+.ph{width:340px;height:700px;border-radius:46px;background:var(--bg);position:relative;overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 0 9px var(--bezel),0 0 0 10px var(--bezel-o),var(--sh-big)}
+.scr{flex:1;min-height:0;overflow:hidden;position:relative;display:flex;flex-direction:column}
+.sp{flex:1;min-height:0}
+.bar{flex:none;height:58px;padding:16px 20px 0;display:flex;align-items:center;justify-content:space-between}
+.bar .ttl{font-size:24px;font-weight:800;letter-spacing:-.03em}
+.card{background:var(--card);border-radius:28px;box-shadow:var(--sh);flex:none}
+.coin{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px 0 8px;border-radius:18px;background:var(--card);box-shadow:var(--sh-s);font:800 16px var(--fn)}
+.coin .ic{width:22px;height:22px}
+.pillw{display:inline-flex;align-items:center;height:34px;padding:0 14px;border-radius:17px;background:var(--card);box-shadow:var(--sh-s);font-size:14px;font-weight:800}
+.prog{height:16px;border-radius:99px;background:var(--track);box-shadow:inset 0 2px 4px rgba(76,62,160,.2);overflow:hidden}
+.prog i{display:block;height:100%;border-radius:99px;background:linear-gradient(180deg,#A3A1FF,#5B5BFF);box-shadow:inset 0 3px 3px rgba(255,255,255,.55),inset 0 -3px 4px rgba(40,30,160,.38);
+  position:relative;overflow:hidden;animation:fillx 1.2s cubic-bezier(.2,.8,.2,1) .3s both}
+.prog i::after{content:"";position:absolute;top:0;bottom:0;left:-40%;width:34%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,255,255,.55),rgba(255,255,255,0));animation:sheen 3.4s ease-in-out 1.6s infinite}
+.btn{display:block;width:100%;height:54px;border-radius:18px;background:#5B5BFF;color:#fff;font-weight:800;font-size:17px;text-align:center;
+  box-shadow:0 12px 20px -10px rgba(91,91,255,.7),inset 0 -4px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.btn.sub{background:var(--pt-l);color:var(--pt-d);box-shadow:inset 0 -4px 0 rgba(91,91,255,.14),inset 0 2px 0 rgba(255,255,255,.12)}
+.bdg{display:inline-flex;align-items:center;height:24px;padding:0 10px;border-radius:12px;font-size:12px;font-weight:800;white-space:nowrap}
+.bdg.ok{background:var(--ok-l);color:var(--ok)} .bdg.ing{background:var(--ing-b);color:var(--ing-t)} .bdg.yet{background:var(--yet-b);color:var(--yet-t)} .bdg.no{background:var(--no-b);color:var(--no-t)}
+/* 누름: 버튼이 살짝 눌림 */
+.btn,.go,.opt,.chips2 button,.seg button,.tabbar button,.it,.fchips button,.moods button,.s-quiz .x,.jbtn,.theme button{transition:transform .16s var(--spring),box-shadow .16s,background .2s}
+.btn:active,.go:active{transform:translateY(3px);box-shadow:0 4px 8px -6px rgba(91,91,255,.7),inset 0 -1px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.btn.sub:active{box-shadow:inset 0 -1px 0 rgba(91,91,255,.14)}
+.opt:active,.chips2 button:active,.seg button:active,.tabbar button:active,.fchips button:active,.moods button:active,.s-quiz .x:active,.theme button:active{transform:scale(.95)}
+.it:active{transform:scale(.93)}
+/* 아래 탭 */
+.tabbar{flex:none;height:76px;background:var(--card);border-radius:28px 28px 0 0;box-shadow:0 -10px 30px -14px rgba(76,62,160,.28);display:flex;padding:8px 8px 0;position:relative;z-index:2}
+.tabbar button{flex:1;height:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:11px;font-weight:700;color:var(--tabtx);border-radius:16px}
+.tabbar button svg{width:26px;height:26px;display:block;overflow:visible}
+.tabbar button.on{color:var(--pt);font-weight:800}
+.tabbar button.on svg{filter:drop-shadow(0 3px 3px rgba(91,91,255,.3))}
+
+/* ── 캐릭터 「몽글이」 ── */
+.ch{position:relative}
+.ch svg{overflow:visible}
+.ped{position:absolute;left:50%;bottom:18px;width:196px;height:40px;transform:translateX(-50%);border-radius:50%;
+  background:var(--ped);box-shadow:0 7px 0 var(--ped-s),0 22px 22px -8px rgba(76,62,160,.4)}
+.mg-fig{transform-box:view-box;transform-origin:110px 214px;animation:squish 3.2s ease-in-out infinite}
+.mg-sh{transform-box:view-box;transform-origin:110px 216px;animation:shsq 3.2s ease-in-out infinite}
+.mg-eyes{transform-box:fill-box;transform-origin:center;animation:blink 5.2s linear infinite}
+@keyframes squish{0%,100%{transform:scale(1,1)}28%{transform:scale(.975,1.03)}62%{transform:scale(1.04,.958)}}
+@keyframes shsq{0%,100%{transform:scale(1)}28%{transform:scale(.95)}62%{transform:scale(1.06)}}
+@keyframes blink{0%,91%,97%,100%{transform:scaleY(1)}94%{transform:scaleY(.1)}}
+.in-hat{transform-box:fill-box;transform-origin:50% 100%;animation:dropIn .62s var(--spring) both}
+.in-glasses{transform-box:fill-box;transform-origin:center;animation:zoomIn .5s var(--spring) both}
+.in-charm{transform-box:fill-box;transform-origin:20% 0;animation:swingIn .9s ease-out both}
+@keyframes dropIn{0%{transform:translateY(-58px) scale(.86,1.14);opacity:0}40%{transform:translateY(5px) scale(1.12,.86);opacity:1}68%{transform:translateY(-4px) scale(.96,1.04)}100%{transform:none}}
+@keyframes zoomIn{0%{transform:scale(1.45);opacity:0}55%{transform:scale(.94);opacity:1}100%{transform:none}}
+@keyframes swingIn{0%{transform:rotate(-55deg) scale(.4);opacity:0}35%{transform:rotate(24deg) scale(1.05);opacity:1}60%{transform:rotate(-12deg)}80%{transform:rotate(5deg)}100%{transform:none}}
+@keyframes pulse{0%,100%{box-shadow:0 7px 0 #3737C4,0 18px 22px -6px rgba(63,63,214,.55),0 0 0 6px rgba(91,91,255,.22)}50%{box-shadow:0 7px 0 #3737C4,0 18px 22px -6px rgba(63,63,214,.55),0 0 0 13px rgba(91,91,255,.08)}}
+@keyframes pop{0%{transform:scale(.9,1.08)}55%{transform:scale(1.06,.95)}100%{transform:scale(1,1)}}
+@keyframes boing{0%{transform:scale(.86)}45%{transform:scale(1.09)}72%{transform:scale(.97)}100%{transform:scale(1)}}
+@keyframes fillx{from{width:0}}
+@keyframes sheen{0%{left:-40%}40%,100%{left:120%}}
+@keyframes sheetUp{0%{transform:translateY(105%)}100%{transform:translateY(0)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-7px)}40%,80%{transform:translateX(7px)}}
+@keyframes spk{0%{transform:translate(0,0) scale(0) rotate(0deg);opacity:1}45%{transform:translate(var(--dx),var(--dy)) scale(1) rotate(50deg);opacity:1}100%{transform:translate(calc(var(--dx) * 1.35),calc(var(--dy) * 1.35)) scale(.2) rotate(110deg);opacity:0}}
+@keyframes road{from{stroke-dasharray:0 100}}
+.spk{position:absolute;width:var(--s);height:var(--s);margin:calc(var(--s) / -2) 0 0 calc(var(--s) / -2);pointer-events:none;z-index:3;animation:spk .85s ease-out var(--d) both}
+.spk svg{display:block;width:100%;height:100%}
+
+/* ── ① 메인 (58 + 194 + 100 + 94 + 84 + 82 + 76 = 688) ── */
+.s-home .hello{font-size:12.5px;color:var(--sub);line-height:1.2}
+.s-home .name{font-size:19px;font-weight:800;letter-spacing:-.02em;line-height:1.25}
+.hero{flex:none;position:relative;height:186px;margin:8px 16px 0;border-radius:28px;overflow:hidden;background:var(--hero);box-shadow:var(--sh)}
+.hero .ch{position:absolute;left:50%;bottom:16px;width:140px;margin-left:-70px}
+.hero .ped{width:164px;height:34px;bottom:14px}
+.hero .say{position:absolute;left:14px;top:14px;height:28px;padding:0 12px;border-radius:14px 14px 14px 4px;background:var(--card);font-size:12.5px;font-weight:800;display:flex;align-items:center;box-shadow:var(--sh-s);z-index:1}
+.hero .say b{color:var(--pt);margin:0 2px}
+.hero .lv{position:absolute;right:14px;top:14px;height:28px;padding:0 12px;border-radius:14px;background:#5B5BFF;color:#fff;font:800 13px var(--fn);display:flex;align-items:center;box-shadow:inset 0 -3px 0 rgba(30,20,160,.28);z-index:1}
+.mission{height:88px;margin:12px 16px 0;padding:0 14px;display:flex;align-items:center;gap:12px}
+.tile{width:54px;height:54px;border-radius:18px;flex:none;display:grid;place-items:center;background:var(--tile);box-shadow:var(--tile-sh)}
+.tile .ic{width:34px;height:34px}
+.mission .tile{width:50px;height:50px;border-radius:17px}
+.mission .tx{flex:1;min-width:0}
+.mission small{display:block;font-size:12.5px;color:var(--sub);line-height:1.3}
+.mission strong{display:block;font-size:18px;font-weight:800;letter-spacing:-.03em;line-height:1.35;white-space:nowrap}
+.mission .go{flex:none;height:40px;padding:0 13px;border-radius:14px;background:#5B5BFF;color:#fff;font-size:14px;font-weight:800;box-shadow:0 8px 14px -8px rgba(91,91,255,.8),inset 0 -3px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.next{height:82px;margin:12px 16px 0;padding:14px 16px 0}
+.next .rowx{display:flex;justify-content:space-between;align-items:baseline;font-size:13.5px;height:22px}
+.next .rowx b{font-size:15px;font-weight:800;color:var(--pt)}
+.next .track{display:flex;align-items:center;gap:8px;margin-top:8px;height:30px}
+.next .track .prog{flex:1}
+.next .track .ic{width:30px;height:30px}
+.stats{flex:none;height:72px;margin:12px 16px 0;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.stats .card{border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 14px}
+.stats .ic{width:30px;height:30px}
+.stats small{display:block;font-size:12px;color:var(--sub);line-height:1.2}
+.stats b{display:block;font-size:19px;font-weight:800;line-height:1.25}
+.stats b .star{color:var(--star)}
+
+/* ── ② 성적노트 (58 + 42 + 76 + 144 + 170 + 126 + 탭 76 = 692) ── */
+.chips2{flex:none;height:34px;margin:8px 16px 0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.chips2::-webkit-scrollbar{display:none}
+.chips2 button{flex:none;height:34px;padding:0 12px;border-radius:17px;background:var(--card);font-size:13px;font-weight:700;color:var(--sub);box-shadow:0 2px 6px -3px rgba(76,62,160,.2)}
+.chips2 button.on{background:#5B5BFF;color:#fff;font-weight:800;box-shadow:0 8px 14px -8px rgba(91,91,255,.8),inset 0 -3px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.s-note .bar .mini{display:flex;align-items:center;gap:8px}
+.s-note .bar .mini .ch{width:34px}
+.sum{height:66px;margin:10px 16px 0;display:grid;grid-template-columns:1.1fr 1fr .9fr;align-items:center;padding:0 6px}
+.sum>div{padding:0 10px;border-left:1.5px solid var(--line)}
+.sum>div:first-child{border-left:0}
+.sum small{display:block;font-size:11.5px;color:var(--sub);line-height:1.3;white-space:nowrap}
+.sum b{display:block;font:800 25px/1.15 var(--fn);letter-spacing:-.02em}
+.sum b em{font-style:normal;font-size:14px;color:var(--sub);margin-left:1px}
+.sum>div:first-child b{color:var(--pt)}
+.graph{height:134px;margin:10px 16px 0;padding:12px 14px 0}
+.hd{display:flex;justify-content:space-between;align-items:center;height:20px}
+.hd strong{font-size:15px;font-weight:800;letter-spacing:-.02em}
+.hd span{font-size:12px;color:var(--sub);display:inline-flex;align-items:center;gap:5px}
+.hd .lg i{display:inline-block;width:14px;height:5px;border-radius:3px;background:var(--pt)}
+.hd .lg i.av{background:repeating-linear-gradient(90deg,var(--avg) 0 4px,transparent 4px 7px);margin-left:6px}
+.graph svg{display:block;width:280px;height:92px;margin-top:4px}
+.list{margin:10px 16px 0;padding:10px 16px}
+.list.t3{height:160px} .list.t2{height:116px}
+.tr{display:flex;align-items:center;justify-content:space-between;gap:8px;height:40px;border-top:1.5px solid var(--line)}
+.list .hd+.tr{border-top:0}
+.list.t2 .tr{height:38px}
+.tr b{display:block;font-size:14px;font-weight:700;line-height:1.3;letter-spacing:-.02em}
+.tr small{display:block;font-size:11.5px;color:var(--sub);line-height:1.3}
+.tr .sc{font:800 19px var(--fn);white-space:nowrap}
+.tr .sc em{font-style:normal;font-size:12px;color:var(--sub)}
+
+/* ── ③ 퇴근 미션 (58 + 58 + 152 + 260 + 148 = 676) ── */
+.s-quiz .bar b{font-size:16px;font-weight:800}
+.s-quiz .x{width:36px;height:36px;border-radius:13px;background:var(--card);box-shadow:var(--sh-s);display:grid;place-items:center}
+.s-quiz .x svg{width:16px;height:16px}
+.qprog{flex:none;height:48px;margin:10px 20px 0}
+.qprog .rowx{display:flex;justify-content:space-between;align-items:baseline;height:22px}
+.qprog strong{font-size:16px;font-weight:800;letter-spacing:-.02em}
+.qprog strong .num{color:var(--pt);font-size:18px}
+.qprog .rowx span.c{font:800 13px var(--fn);color:var(--sub)}
+.qprog .track{display:flex;align-items:center;gap:6px;height:26px}
+.qprog .track .prog{flex:1;height:14px}
+.qprog .track .ic{width:26px;height:26px}
+.qcard{height:140px;margin:12px 16px 0;padding:18px 20px 0;text-align:center}
+.qcard .tag{display:inline-flex;align-items:center;height:26px;padding:0 12px;border-radius:13px;background:var(--tag-b);color:var(--tag-t);font-size:12.5px;font-weight:800}
+.qcard .q{font-size:40px;line-height:50px;margin-top:6px;letter-spacing:.02em}
+.qcard p{font-size:15px;font-weight:700;color:var(--body);line-height:22px}
+.opts{flex:none;margin:12px 16px 0;display:grid;gap:8px}
+.opt{height:56px;border-radius:20px;background:var(--card);box-shadow:var(--sh-s);display:flex;align-items:center;gap:12px;padding:0 14px;text-align:left;width:100%}
+.opt .no{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:14px;color:var(--yet-t);background:var(--no-ball);box-shadow:0 2px 0 var(--no-ball-s)}
+.opt .tx{flex:1;min-width:0}
+.opt .tx b{display:block;font-size:18px;line-height:22px}
+.opt .tx small{display:block;font-size:11.5px;color:var(--sub);line-height:15px}
+.opt.ok{background:var(--ok-bg);box-shadow:0 0 0 2.5px #2FBF8C,0 14px 22px -12px rgba(23,138,99,.5)}
+.opt.ok .no{color:#fff;background:radial-gradient(circle at 34% 26%,#B9F5DE 0,#4FCB9F 50%,#1FA877 100%);box-shadow:0 2px 0 #148A60}
+.opt.ok .tx small{color:var(--ok)}
+.opt.bad{animation:shake .42s ease-in-out;background:var(--no-b);box-shadow:0 0 0 2px #FFB3A3}
+.opt .ic{width:26px;height:26px}
+.sheet{flex:none;height:148px;background:var(--card);border-radius:28px 28px 0 0;box-shadow:0 -12px 30px -14px rgba(76,62,160,.3);padding:12px 16px 18px;animation:sheetUp .7s cubic-bezier(.2,.95,.3,1.12) .5s both}
+.fb{height:54px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.fb .gear{width:54px;height:54px;flex:none;display:block;overflow:visible}
+.fb .t{flex:1;min-width:0}
+.fb strong{display:block;font-size:17px;font-weight:800;color:var(--ok);line-height:22px;letter-spacing:-.02em;white-space:nowrap}
+.fb .t>span{display:block;font-size:12.5px;color:var(--body);line-height:18px}
+.fb .t>span b{font:800 13px var(--fn);color:var(--star)}
+.fb .ch{width:40px;flex:none;margin:-6px 2px 0 0}
+.spin{transform-box:fill-box;transform-origin:center;animation:spin 12s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.gpop{transform-box:fill-box;transform-origin:center;animation:gpop .6s cubic-bezier(.3,1.6,.5,1) 1s both}
+@keyframes gpop{0%{transform:scale(0) rotate(-40deg)}100%{transform:none}}
+
+/* ── ④ 어드민 (창 40 + 내용 580) ── */
+.pc{width:940px;height:620px;border-radius:22px;background:var(--card);overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 0 1px var(--bezel-o),var(--sh-big)}
+.chrome{height:40px;flex:none;background:var(--chrome);display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--line)}
+.chrome i{width:12px;height:12px;border-radius:50%}
+.chrome .url{margin-left:14px;width:380px;height:24px;border-radius:12px;background:var(--card);font-size:12px;color:var(--sub);display:flex;align-items:center;padding:0 12px;box-shadow:inset 0 0 0 1px var(--line)}
+.pcb{flex:1;min-height:0;display:flex;background:var(--soft)}
+.side{width:176px;flex:none;background:var(--card);padding:16px 12px 14px;display:flex;flex-direction:column;gap:2px;border-right:1px solid var(--line)}
+.side .brand{height:40px;display:flex;align-items:center;gap:9px;padding:0 10px;margin-bottom:10px;font-size:15px;font-weight:800;letter-spacing:-.02em}
+.side .mark{width:24px;height:24px;border-radius:8px;background:#5B5BFF;box-shadow:inset 0 -3px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3)}
+.side a{height:38px;border-radius:12px;display:flex;align-items:center;justify-content:space-between;padding:0 12px;font-size:14px;font-weight:600;color:var(--body);text-decoration:none;cursor:pointer}
+.side a:hover{background:var(--soft)}
+.side a.on{background:var(--pt-l);color:var(--pt-d);font-weight:800}
+.side a em{font-style:normal;font:800 11px var(--fn);color:#fff;background:#F0604F;border-radius:9px;min-width:18px;height:18px;display:grid;place-items:center;padding:0 5px}
+.side .me{margin-top:auto;border-radius:14px;background:var(--soft);padding:10px 12px;font-size:12px;color:var(--sub);line-height:1.45}
+.side .me b{display:block;font-size:13px;color:var(--ink);font-weight:800}
+.main{flex:1;min-width:0;padding:20px;display:flex;flex-direction:column;gap:14px}
+.pc .card{border-radius:18px;box-shadow:0 0 0 1px var(--line),0 1px 2px rgba(30,27,58,.04)}
+.mh{flex:none;height:44px;display:flex;align-items:center;justify-content:space-between}
+.mh h4{margin:0;font-size:22px;font-weight:800;letter-spacing:-.03em;line-height:26px}
+.mh p{font-size:12.5px;color:var(--sub);line-height:18px}
+.mh .btn{width:auto;height:40px;padding:0 18px;font-size:14px;border-radius:13px;box-shadow:inset 0 -3px 0 rgba(30,20,160,.24)}
+.kpis{flex:none;height:88px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.kpi{padding:12px 16px;display:flex;flex-direction:column;justify-content:center;min-width:0}
+.kpi small{display:block;font-size:12.5px;color:var(--sub);line-height:17px;font-weight:600}
+.kpi b{display:block;font:800 26px/30px var(--fn);letter-spacing:-.01em}
+.kpi b em{font-style:normal;font-size:14px;color:var(--sub);font-weight:700}
+.kpi b.warn{color:var(--warn)}
+.kpi span{display:block;font-size:12px;color:var(--sub);line-height:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.kpi .mini{height:6px;border-radius:3px;background:var(--track);margin-top:6px;overflow:hidden}
+.kpi .mini i{display:block;height:100%;border-radius:3px;background:var(--pt);animation:fillx 1.1s cubic-bezier(.2,.8,.2,1) .3s both}
+.low{flex:1;min-height:0;display:flex;gap:14px}
+.tbl{flex:1;min-width:0;padding:14px 16px 0}
+.tbl .hd{height:24px}
+.tbl .hd span{font:800 12.5px var(--fn)}
+.tools{display:flex;align-items:center;gap:10px;height:34px;margin:8px 0}
+.search{flex:1;min-width:0;height:34px;border-radius:11px;background:var(--soft);display:flex;align-items:center;gap:7px;padding:0 11px;box-shadow:inset 0 0 0 1px transparent;transition:box-shadow .15s}
+.search:focus-within{box-shadow:inset 0 0 0 1.5px var(--pt);background:var(--card)}
+.search svg{width:15px;height:15px;flex:none}
+.search input{flex:1;min-width:0;border:0;outline:0;background:none;font:600 13px var(--f);color:var(--ink)}
+.search input::placeholder{color:var(--sub)}
+.fchips{display:flex;gap:6px;flex:none}
+.fchips button{height:30px;padding:0 12px;border-radius:15px;font-size:12.5px;font-weight:700;color:var(--sub);background:var(--soft)}
+.fchips button.on{background:var(--ink);color:var(--bg);font-weight:800}
+.fchips button b{font:800 11.5px var(--fn);margin-left:4px;opacity:.7}
+.tbl table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:13px}
+.tbl th{height:30px;text-align:left;font-size:12px;font-weight:700;color:var(--sub);padding:0 8px;white-space:nowrap;border-bottom:1px solid var(--line)}
+.tbl th:first-child,.tbl td:first-child{padding-left:10px}
+.tbl td{height:40px;padding:0 8px;border-top:1px solid var(--line2);white-space:nowrap;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+.tbl tbody tr:first-child td{border-top:0}
+.tbl tbody tr{transition:background .12s}
+.tbl tbody tr:hover{background:var(--hover)}
+.tbl td:first-child{font-weight:800}
+.tbl td .av{display:inline-block;width:18px;height:18px;border-radius:50%;vertical-align:-4px;margin-right:8px}
+.tbl td.n{font-family:var(--fn);font-weight:800}
+.tbl td.z{color:var(--sub)}
+.tbl .empty td{color:var(--sub);text-align:center;font-weight:600}
+.code{width:196px;flex:none;padding:14px 16px 16px;display:flex;flex-direction:column;align-items:center}
+.code .hd{width:100%;height:24px}
+.digits{display:grid;grid-template-columns:repeat(4,34px);gap:6px;margin-top:12px}
+.digits b{height:50px;border-radius:12px;display:grid;place-items:center;font:800 30px var(--fn);color:var(--pt-d);background:var(--pt-l)}
+.code small{font-size:12px;color:var(--sub);line-height:16px;margin-top:8px}
+.qr{width:110px;height:110px;margin-top:12px;border-radius:14px;background:#fff;padding:8px;box-shadow:0 0 0 1px var(--line)}
+.qr svg{display:block;width:100%;height:100%}
+.code .btn{height:38px;font-size:13.5px;border-radius:12px;margin-top:auto}
+
+/* ════ 보상 순간(J): 인디고 포스터 ════ */
+.jx{background:var(--j-bg);color:#fff}
+.jtb{flex:none;height:46px;position:relative;display:flex;align-items:center;justify-content:space-between;padding:6px 16px 0}
+.jtb .x{width:28px;height:28px;border:2px solid #fff;border-radius:50%;display:grid;place-items:center}
+.jtb .x svg{width:11px;height:11px}
+.jtb .tab{position:absolute;left:50%;top:0;transform:translateX(-50%);height:32px;padding:0 16px;display:flex;align-items:center;background:var(--j-lime);color:var(--j-ink);font-family:var(--f-han);font-size:15px;border-radius:0 0 14px 14px;white-space:nowrap}
+.jtb .pill{font-weight:800;font-size:12.5px;border:2px solid #fff;border-radius:999px;padding:3px 10px;white-space:nowrap}
+.an{font-family:var(--f-an)} .han{font-family:var(--f-han)}
+.jsvg{position:absolute;left:0;top:0;overflow:visible}
+.jbtn{flex:none;height:50px;margin:0 14px;border-radius:25px;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center}
+.jbtn.lime{background:var(--j-lime);color:var(--j-ink);box-shadow:0 4px 0 var(--j-ink)}
+.jbtn.line{border:2px solid #fff;color:#fff}
+.jbtn.lime:active{transform:translateY(3px);box-shadow:0 1px 0 var(--j-ink)}
+.jbtn.line:active{transform:translateY(2px) scale(.98);background:rgba(255,255,255,.12)}
+.wob{transform-box:fill-box;transform-origin:center;animation:wob 3.2s ease-in-out infinite}
+@keyframes wob{50%{transform:rotate(8deg)}}
+
+/* ── ⑤ 클리어 (46 + 290 + 30 + 50 + 110 + 50 + 8 + 50 + 16 = 650) ── */
+.s-clear{cursor:pointer}
+.ko{flex:none;position:relative;width:340px;height:290px}
+.ko .ch{position:absolute;left:-10px;top:67px;width:210px;z-index:1}
+.play .drop{animation:drop .95s cubic-bezier(.3,0,.5,1) both;transform-origin:50% 92%}
+@keyframes drop{0%{transform:translateY(-300px)}52%{transform:translateY(0) scale(1.16,.82)}70%{transform:translateY(-26px) scale(.95,1.06)}85%{transform:translateY(0) scale(1.05,.95)}100%{transform:none}}
+.play .lt{transform-box:fill-box;transform-origin:50% 100%;animation:ltIn .55s cubic-bezier(.3,1.7,.5,1) both}
+.play .lt1{animation-delay:.6s} .play .lt2{animation-delay:.76s} .play .lt3{animation-delay:.3s}
+@keyframes ltIn{0%{opacity:0;transform:translateY(26px) scale(.3)}100%{opacity:1;transform:none}}
+.play .cf{transform-box:fill-box;transform-origin:center;animation:cf .9s ease-out .6s both}
+@keyframes cf{0%{opacity:0;transform:translateY(30px) scale(.2) rotate(-90deg)}100%{opacity:1;transform:none}}
+.s-clear .say{flex:none;height:22px;margin:0 16px 8px;font-size:14.5px;font-weight:600;line-height:22px}
+.s-clear .say b{color:var(--j-lime);font-weight:800}
+.rec{flex:none;height:50px;margin:0 14px;display:flex;border:2px solid #fff;border-radius:18px}
+.rec div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:2px solid rgba(255,255,255,.4)}
+.rec div:first-child{border-left:0}
+.rec b{font-size:15px;font-weight:800;line-height:18px}
+.rec span{font-size:10.5px;font-weight:600;line-height:14px;color:rgba(255,255,255,.92)}
+.rw{flex:none;height:88px;margin:10px 14px 12px;background:var(--card);color:var(--ink);border-radius:24px;display:flex;align-items:center;gap:12px;padding:0 14px;position:relative}
+.rw .tile{width:60px;height:60px;border-radius:18px;background:var(--j-bg);box-shadow:none;position:relative}
+.rw .tile svg{display:block;width:46px;height:38px;overflow:visible}
+.rw .ngear{position:absolute;right:-12px;top:-14px;width:40px;height:40px;overflow:visible}
+.rw .t{flex:1;min-width:0}
+.rw small{display:block;font-size:12px;font-weight:800;line-height:16px;color:var(--sub)}
+.rw strong{display:block;font-family:var(--f-han);font-weight:400;font-size:24px;line-height:28px}
+.rw span{display:block;font-size:12px;font-weight:700;line-height:16px}
+.rw span b{color:var(--star)}
+
+/* ── ⑥ 꾸미기 (58 + 206 + 60 + 필터 40 + 격자 260 + 탭 76 = 700) ── */
+.pv{flex:none;position:relative;height:200px;margin:6px 16px 0;border-radius:28px;overflow:hidden;box-shadow:var(--sh);background:var(--hero);transition:background .3s}
+.pv .ch{position:absolute;left:50%;bottom:20px;width:162px;margin-left:-81px;transform-origin:50% 90%}
+.pv .ch.pop{animation:pop .42s var(--spring)}
+.pv .hint{position:absolute;left:14px;top:14px;height:26px;padding:0 11px;border-radius:13px;background:var(--glass);font-size:12px;font-weight:800;color:var(--body);display:flex;align-items:center;z-index:1}
+.seg{flex:none;margin:14px 16px 0;height:46px;border-radius:16px;background:var(--track);padding:4px;display:flex;gap:4px}
+.seg button{flex:1;border-radius:12px;font-weight:700;font-size:14px;color:var(--sub)}
+.seg button.on{background:var(--card);color:var(--ink);font-weight:800;box-shadow:0 4px 10px -4px rgba(76,62,160,.32)}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:10px 16px 12px;overflow-y:auto;flex:1;min-height:0;align-content:start}
+.it{height:104px;border-radius:22px;background:var(--card);box-shadow:var(--sh-s);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;padding:8px 4px 10px;position:relative;font-size:12.5px;font-weight:700;line-height:1.3}
+.it.boing{animation:boing .46s var(--spring)}
+.it svg.art{width:56px;height:44px;display:block;margin-bottom:2px;overflow:visible}
+.it.on{box-shadow:0 0 0 2.5px var(--pt),0 14px 22px -10px rgba(91,91,255,.5);font-weight:800;color:var(--pt-d)}
+.it.lock{background:var(--soft)}
+.it.lock svg.art{filter:grayscale(.9);opacity:.42}
+.it.lock.on svg.art{filter:none;opacity:1}
+.it em{font-style:normal;font-size:10.5px;font-weight:600;color:var(--sub);line-height:1.2}
+.it .lk{position:absolute;top:7px;right:7px;width:20px;height:20px}
+.it .ck{position:absolute;top:7px;right:7px;width:20px;height:20px}
+:root[data-theme="dark"] .it:not(.lock) svg.art{filter:drop-shadow(0 0 4px rgba(210,205,255,.35))}
+:root[data-theme="dark"] .it.lock svg.art{filter:grayscale(.9) drop-shadow(0 0 4px rgba(210,205,255,.45));opacity:.6}
+:root[data-theme="dark"] .it.lock.on svg.art{filter:drop-shadow(0 0 4px rgba(210,205,255,.35));opacity:1}
+
+/* ── ⑦ 수업 맵 (58 + 72 + 420 + 76 = 626) ── */
+.s-map .hdm{flex:none;height:64px;margin:8px 20px 0}
+.s-map .hdm strong{display:block;font-size:24px;font-weight:800;letter-spacing:-.03em;line-height:34px}
+.s-map .hdm strong .num{color:var(--pt);font-size:26px}
+.s-map .hdm .prog{margin-top:8px;height:14px}
+.path{position:relative;flex:none;width:340px;height:420px;margin:auto 0}
+.path svg.ln{position:absolute;inset:0;width:100%;height:100%}
+.path .done-road{animation:road 1.6s cubic-bezier(.3,.7,.3,1) .3s both}
+.nd{position:absolute;width:56px;height:56px;border-radius:50%;transform:translate(-50%,-50%);display:grid;place-items:center;font:800 22px var(--fn)}
+.nd.done{color:#0B5F43;background:radial-gradient(circle at 34% 26%,#E9FFF6 0,#A3ECCF 42%,#58CDA1 100%);box-shadow:0 6px 0 #2FA57C,0 16px 18px -6px rgba(23,138,99,.45),inset 0 3px 4px rgba(255,255,255,.7)}
+.nd.now{width:66px;height:66px;font-size:26px;color:#fff;background:radial-gradient(circle at 34% 26%,#B9B7FF 0,#6F6FFF 45%,#4A4AE8 100%);animation:pulse 1.8s ease-in-out infinite;box-shadow:0 7px 0 #3737C4,0 18px 22px -6px rgba(63,63,214,.55),0 0 0 6px rgba(91,91,255,.22)}
+.nd.lock{color:var(--lock-t);background:var(--lock-ball);box-shadow:0 6px 0 var(--lock-s),0 14px 16px -6px rgba(76,62,160,.25)}
+.nd.goal{width:78px;height:78px;background:radial-gradient(circle at 34% 26%,#FFFDF0 0,#FFE98F 45%,#FFCB42 100%);box-shadow:0 7px 0 #E0A21A,0 18px 22px -6px rgba(201,134,0,.45),inset 0 3px 4px rgba(255,255,255,.7)}
+.nd.goal .ic{width:46px;height:46px}
+.nd .bd2{position:absolute;right:-4px;top:-4px;width:20px;height:20px}
+.nd .cap{position:absolute;top:100%;left:50%;transform:translateX(-50%);margin-top:12px;font:800 12px var(--f);white-space:nowrap;color:var(--ing-t);background:var(--ing-b);border-radius:10px;padding:3px 9px}
+.path .say{position:absolute;height:24px;padding:0 10px;border-radius:12px;background:var(--ink);color:var(--bg);font-size:12px;font-weight:800;display:flex;align-items:center;transform:translateX(-50%);white-space:nowrap}
+.path .say::after{content:"";position:absolute;left:50%;top:100%;margin-left:-5px;border:5px solid transparent;border-top-color:var(--ink);border-bottom:0}
+.path .ch{position:absolute;width:56px}
+
+/* ── ⑧ 랭킹 · 이번 주 (46 + 196 + 8 + 278 + 12 + 56 + 50 + 18 = 664) ── */
+.rk-top{flex:none;position:relative;width:340px;height:196px}
+.rk-top .ch{position:absolute;left:58px;top:44px;width:134px;z-index:1}
+.rk-list{flex:none;margin:8px 14px 0;display:flex;flex-direction:column;gap:7px}
+.rr{height:50px;border:2px solid rgba(255,255,255,.85);border-radius:25px;display:flex;align-items:center;gap:8px;padding:0 16px 0 10px}
+.rr .n{width:22px;flex:none;text-align:center;font:400 22px/1 var(--f-an)}
+.rr .ch{width:36px;flex:none;margin-top:-4px}
+.rr.first .ch{width:46px;margin:-8px -4px 0 -5px}
+.rr .who{flex:1;min-width:0}
+.rr .who b{display:flex;align-items:center;gap:6px;font-size:15px;font-weight:800;line-height:19px}
+.rr .who b i{font-style:normal;font-size:10.5px;font-weight:800;background:var(--j-ink);color:var(--j-lime);border-radius:8px;padding:0 6px;line-height:16px}
+.rr .who small{display:block;font-size:11px;font-weight:600;line-height:15px;color:rgba(255,255,255,.88);white-space:nowrap}
+.rr .v{flex:none;font:400 26px/1 var(--f-an);color:var(--j-lime);letter-spacing:.02em}
+.rr .v em{font:800 11px var(--f);font-style:normal;color:#fff;margin-left:2px}
+.rr.first{border-color:var(--j-lime)}
+.rr.me{background:var(--j-lime);border-color:var(--j-lime);color:var(--j-ink);box-shadow:0 4px 0 var(--j-ink)}
+.rr.me .who small{color:#2E3A00}
+.rr.me .v{color:var(--j-ink)} .rr.me .v em{color:var(--j-ink)}
+.myrk{flex:none;height:56px;margin:12px 14px 0;border-radius:28px;background:var(--j-ink);display:flex;align-items:center;gap:10px;padding:0 16px 0 10px}
+.myrk .ch{width:40px;flex:none;margin-top:-6px}
+.myrk small{display:block;font-size:11px;font-weight:800;color:var(--j-lime);line-height:14px}
+.myrk b{display:block;font:400 24px/26px var(--f-an);color:#fff;letter-spacing:.02em}
+.myrk p{flex:1;min-width:0;font-size:12.5px;font-weight:700;line-height:17px;color:#fff;border-left:2px solid rgba(255,255,255,.25);padding-left:12px}
+
+/* ── ＋ 몽글이 캐릭터 시트 (400 + 174 + 칩 96 = 670) ── */
+.cs{width:380px;height:700px;border-radius:40px;background:var(--card);overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 0 0 1px var(--bezel-o),var(--sh-big)}
+.cs .stage{position:relative;flex:none;height:400px;background:var(--hero)}
+.cs .stage .ped{width:262px;height:52px;bottom:22px}
+.cs .stage .ch{position:absolute;left:50%;bottom:30px;width:270px;margin-left:-135px}
+.cs .stage .lbl{position:absolute;left:18px;top:18px;height:30px;padding:0 13px;border-radius:15px;background:var(--glass);font-size:13px;font-weight:800;display:flex;align-items:center;gap:6px;z-index:1}
+.cs .stage .lbl b{font:800 13px var(--fn);color:var(--pt)}
+.moods{flex:none;display:grid;grid-template-columns:repeat(3,1fr);gap:10px;padding:16px 16px 0}
+.moods button{height:142px;border-radius:22px;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:2px;padding-bottom:10px;font-size:13px;font-weight:700;color:var(--sub)}
+.moods button .ch{width:92px}
+.moods button.on{background:var(--card);color:var(--pt-d);font-weight:800;box-shadow:0 0 0 2.5px var(--pt),0 14px 22px -10px rgba(91,91,255,.45)}
+.mat{display:flex;flex-wrap:wrap;gap:6px;padding:16px}
+.mat span{height:26px;padding:0 10px;border-radius:13px;background:var(--bg);font-size:12px;font-weight:700;color:var(--body);display:inline-flex;align-items:center}
+
+
+/* ════ 추가: 메인 랭킹 미니 카드 · 설정 · 캐릭터 끄기 · 아이템 등급 ════ */
+.bar .acts{display:flex;align-items:center;gap:8px}
+.gearb{width:36px;height:36px;border-radius:13px;background:var(--card);box-shadow:var(--sh-s);display:grid;place-items:center}
+.gearb svg{width:20px;height:20px}
+.rkmini{height:70px;margin:12px 16px 0;padding:0 14px;display:flex;align-items:center;gap:10px;border-radius:24px;cursor:pointer}
+.rkmini .tx{flex:1;min-width:0}
+.rkmini small{display:block;font-size:12px;color:var(--sub);line-height:16px}
+.rkmini strong{display:block;font-size:17px;font-weight:800;line-height:24px;letter-spacing:-.02em}
+.rkmini strong .num{color:var(--pt);font-size:19px}
+.rkmini .three{display:flex;align-items:flex-end;gap:4px;flex:none}
+.rkmini .p{position:relative;width:44px;display:flex;flex-direction:column;align-items:center}
+.rkmini .p .ch{width:38px}
+.rkmini .p.p1 .ch{width:46px}
+.rkmini .p i{position:absolute;left:0;top:-2px;font:800 10.5px/16px var(--fn);font-style:normal;min-width:16px;height:16px;border-radius:8px;background:var(--ink);color:var(--bg);text-align:center;z-index:2}
+.rkmini .p.me i{background:#5B5BFF;color:#fff}
+.rkmini .p span{font-size:10px;font-weight:700;color:var(--sub);line-height:12px;white-space:nowrap}
+/* 캐릭터 끄면: 메인 히어로는 「오늘 할 일」 카드 */
+.hero .todo{display:none;position:absolute;inset:0;padding:16px 18px;flex-direction:column}
+.char-off .hero .ch,.char-off .hero .ped,.char-off .hero .say,.char-off .hero .lv{display:none}
+.char-off .hero .todo{display:flex}
+.todo small{font-size:12.5px;color:var(--sub);line-height:18px}
+.todo .big{font:800 34px/40px var(--fn);letter-spacing:-.02em}
+.todo .big em{font:800 17px var(--f);font-style:normal;margin-left:2px}
+.todo ul{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:6px}
+.todo li{height:44px;border-radius:14px;background:var(--glass);display:flex;align-items:center;gap:10px;padding:0 12px;font-size:14px;font-weight:700}
+.todo li .dot{width:20px;height:20px;border-radius:50%;flex:none;display:grid;place-items:center}
+.todo li .dot.done{background:#2FBF8C} .todo li .dot.done svg{width:12px;height:12px}
+.todo li .dot.yet{box-shadow:inset 0 0 0 2.5px var(--pt)}
+.todo li span{flex:1;min-width:0}
+.todo li b{font-size:12px;color:var(--sub);font-weight:700}
+.todo li.now b{color:var(--pt);font-weight:800}
+/* 이니셜 동그라미(캐릭터 끔) */
+.ch.is-ini{container-type:inline-size}
+.ini{display:grid;place-items:center;width:78%;aspect-ratio:1;margin:14% auto 0;border-radius:50%;font:800 40cqw/1 var(--f);letter-spacing:-.04em;color:#fff;
+  background:radial-gradient(circle at 34% 26%,#B9B7FF 0,#6F6FFF 48%,#4545E0 100%);box-shadow:inset 0 -6cqw 8cqw rgba(30,20,160,.3),inset 0 4cqw 5cqw rgba(255,255,255,.35)}
+.ini.ot{color:var(--j-bg);background:#fff;box-shadow:none}
+.rr .ini.ot{background:#fff;color:var(--j-bg)}
+.ko .ini{background:var(--j-lime);color:var(--j-ink);font-family:var(--f-han);font-weight:400;box-shadow:inset 0 -5cqw 0 var(--j-lime-d)}
+.char-off .pv .hint{background:var(--j-ink);color:var(--j-lime)}
+/* 설정 화면 */
+.s-set .bar .ttl{font-size:22px}
+.set-me{height:76px;margin:8px 16px 0;padding:0 16px;display:flex;align-items:center;gap:12px}
+.set-me .ch{width:50px;flex:none}
+.set-me b{display:block;font-size:17px;font-weight:800;line-height:22px}
+.set-me small{display:block;font-size:12.5px;color:var(--sub);line-height:18px}
+.set-me .lvp{margin-left:auto;font:800 13px var(--fn);color:var(--pt);background:var(--pt-l);border-radius:12px;padding:4px 10px}
+.set-h{flex:none;height:26px;margin:14px 24px 0;font-size:13px;font-weight:800;color:var(--sub);display:flex;align-items:flex-end}
+.set-c{margin:6px 16px 0;padding:4px 16px}
+.srow{display:flex;align-items:center;gap:12px;min-height:60px;border-top:1.5px solid var(--line)}
+.srow:first-child{border-top:0}
+.srow .tx{flex:1;min-width:0}
+.srow .tx b{display:block;font-size:15px;font-weight:800;line-height:21px}
+.srow .tx small{display:block;font-size:12px;color:var(--sub);line-height:17px}
+.srow.tall{min-height:88px}
+.sw{position:relative;width:52px;height:32px;border-radius:16px;background:var(--track);flex:none;box-shadow:inset 0 2px 4px rgba(76,62,160,.2);transition:background .2s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 3px 6px rgba(30,27,58,.3);transition:transform .22s var(--spring)}
+.sw[aria-checked="true"]{background:#5B5BFF}
+.sw[aria-checked="true"]::after{transform:translateX(20px)}
+.seg3{display:flex;gap:3px;background:var(--track);border-radius:12px;padding:3px;flex:none}
+.seg3 button{height:30px;padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--sub)}
+.seg3 button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:800;box-shadow:0 3px 8px -4px rgba(76,62,160,.4)}
+.set-pv{height:92px;margin:12px 16px 0;padding:0 14px;display:flex;align-items:center;gap:10px}
+.set-pv>div{flex:1;display:flex;align-items:center;gap:8px;border-radius:18px;background:var(--bg);height:68px;padding:0 10px}
+.set-pv>div.on{box-shadow:0 0 0 2px var(--pt)}
+.set-pv .ch{width:42px;flex:none}
+.set-pv b{font-size:13px;font-weight:800;line-height:18px;display:block}
+.set-pv small{font-size:11px;color:var(--sub);line-height:15px;display:block}
+.top .chartg{display:inline-flex;align-items:center;gap:10px;background:var(--card);border-radius:999px;padding:4px 6px 4px 14px;box-shadow:var(--sh-s);font-size:13.5px;font-weight:800}
+.top .chartg .sw{width:46px;height:28px}
+.top .chartg .sw::after{width:22px;height:22px}
+.top .chartg .sw[aria-checked="true"]::after{transform:translateX(18px)}
+.top .ctl{display:flex;gap:10px;flex-wrap:wrap}
+/* 아이템 등급: 희귀(성적) · 힙(성실) */
+.gfil{flex:none;display:flex;gap:6px;margin:10px 16px 0;height:30px}
+.gfil button{height:30px;padding:0 13px;border-radius:15px;font-size:12.5px;font-weight:700;color:var(--sub);background:var(--card);box-shadow:0 2px 6px -3px rgba(76,62,160,.25);display:inline-flex;align-items:center;gap:5px}
+.gfil button[aria-pressed="true"]{background:var(--ink);color:var(--bg);font-weight:800}
+.gfil button i{width:9px;height:9px;border-radius:50%;display:block}
+.gfil .g-rare i{background:linear-gradient(135deg,#9D7BFF,#FFC94D)}
+.gfil .g-hip i{background:var(--j-lime);box-shadow:0 0 0 1.5px var(--j-ink)}
+.gfil .why{margin-left:auto;font-size:10.5px;color:var(--sub);font-weight:600;line-height:13px;text-align:right;align-self:center}
+.it .gt{position:absolute;top:7px;left:7px;height:18px;padding:0 7px;border-radius:9px;font-size:10.5px;font-weight:800;line-height:18px;white-space:nowrap}
+.it.rare{border:2px solid transparent;background:linear-gradient(var(--card),var(--card)) padding-box,linear-gradient(135deg,#9D7BFF,#FFD36B 45%,#B48CFF 70%,#FFC94D) border-box;overflow:hidden}
+.it.rare.lock{background:linear-gradient(var(--soft),var(--soft)) padding-box,linear-gradient(135deg,#9D7BFF,#FFD36B 45%,#B48CFF 70%,#FFC94D) border-box}
+.it.rare::after{content:"";position:absolute;top:0;bottom:0;left:-60%;width:40%;background:linear-gradient(100deg,rgba(255,255,255,0),rgba(255,240,200,.55),rgba(255,255,255,0));animation:sheen 3.6s ease-in-out 1s infinite;pointer-events:none}
+.it.rare .gt{background:linear-gradient(135deg,#7B5CFF,#C9A227);color:#fff}
+.it.hip .gt{background:var(--j-lime);color:var(--j-ink);font-family:var(--f-han);font-weight:400;font-size:11.5px;transform:rotate(-6deg);box-shadow:0 2px 0 var(--j-ink)}
+.it.hip .gt::after{content:"*";color:#FF3DB8;margin-left:2px;font-family:var(--f-an)}
+.it.on.rare{box-shadow:0 0 0 2.5px var(--pt),0 14px 22px -10px rgba(91,91,255,.5)}
+.grid .empty{grid-column:1/-1;text-align:center;font-size:13px;color:var(--sub);padding:30px 0}
+.rw .gt{display:inline-block;margin-left:6px;height:17px;padding:0 7px;border-radius:9px;font:400 11px/17px var(--f-han);background:var(--j-lime);color:var(--j-ink);vertical-align:1px}
+@media (max-width:480px){.top{padding:26px 16px 0}.sec{padding:28px 16px 0}.row{padding:20px 25px 76px;gap:30px}.foot{padding:0 16px 48px}.rule{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<svg id="defs" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"></svg>
+<!-- 보상 순간(J) 공통 도형: 톱니 배지 · 별표 · 낙서 지그재그 · 체크 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false"><defs>
+  <symbol id="scal" viewBox="0 0 100 100"><path d="M50.0 8.0A11.5 11.5 0 0 1 71.0 13.6A11.5 11.5 0 0 1 86.4 29.0A11.5 11.5 0 0 1 92.0 50.0A11.5 11.5 0 0 1 86.4 71.0A11.5 11.5 0 0 1 71.0 86.4A11.5 11.5 0 0 1 50.0 92.0A11.5 11.5 0 0 1 29.0 86.4A11.5 11.5 0 0 1 13.6 71.0A11.5 11.5 0 0 1 8.0 50.0A11.5 11.5 0 0 1 13.6 29.0A11.5 11.5 0 0 1 29.0 13.6A11.5 11.5 0 0 1 50.0 8.0Z"/></symbol>
+  <symbol id="ast" viewBox="0 0 24 24"><path d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" stroke="currentColor" stroke-width="4" stroke-linecap="round" fill="none"/></symbol>
+  <symbol id="scrA" viewBox="0 0 160 260"><path d="M20 14L142 40L26 74L138 104L32 134L130 166L42 192L120 222L66 246" fill="none" stroke="#0B0B14" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+</defs></svg>
+
+<header class="top">
+  <div class="topline">
+    <span class="tag">최종 시안 · B 클레이 + J 보상 포스터 · 예시 화면 (숫자·이름은 가짜)</span>
+    <div class="ctl"><span class="chartg">캐릭터 보기<button type="button" class="sw" role="switch" aria-checked="true" data-char-toggle aria-label="캐릭터 보기"></button></span>
+    <div class="theme" role="group" aria-label="화면 밝기">
+      <button type="button" data-theme-set="light" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="3.4" fill="currentColor"/><path d="M8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.4 1.4M11.6 11.6L13 13M3 13l1.4-1.4M11.6 4.4L13 3" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>라이트</button>
+      <button type="button" data-theme-set="dark" aria-pressed="false"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M13.6 10.2A6 6 0 0 1 5.8 2.4a6 6 0 1 0 7.8 7.8z" fill="currentColor"/></svg>다크</button>
+    </div></div>
+  </div>
+  <h1>평소엔 조용하게, <em>끝낼 땐 크게.</em></h1>
+  <p>매일 보는 화면(메인·성적노트·퇴근 미션·꾸미기·수업 맵·어드민)은 시안 B 그대로 — 옅은 바탕, 큰 숫자, 점토 캐릭터 몽글이. 미션을 끝낸 순간·이번 주 랭킹·「정답!」 배지에서만 시안 J의 인디고 포스터가 켜집니다. 말투는 짧고 건조하게, 밤 공부용 다크 모드는 오른쪽 위 버튼으로.</p>
+  <div class="rule">
+    <div><b>평소 = B</b>흰 카드 · 큰 숫자 · 몽글이. 성적노트·문제 풀이에서는 캐릭터를 작게 둬서 공부를 가리지 않습니다.</div>
+    <div class="j"><b>보상 순간 = J</b>인디고 바탕 · 초대형 글자 · O 자리에 몽글이 · 라임 버튼 · 핑크 톱니 배지 · 검은 낙서 선.</div>
+    <div><b>말투</b>「오늘 할 일 1개 남음」 「집까지 7문제」처럼 짧게. 재치는 클리어·랭킹에서만 한 줄.</div>
+  </div>
+  <div class="swatches">
+    <span><i style="background:radial-gradient(circle at 34% 28%,#EFEAFF,#BDAEFF 45%,#8F7BF2)"></i>라벤더</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#FFEEE4,#FFBFA3 45%,#FF9070)"></i>피치</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#E6FDF3,#A3ECCF 45%,#62D2A8)"></i>민트</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#E6F5FF,#ABD9FF 45%,#72B6F5)"></i>스카이</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#FFFBE0,#FFE582 45%,#FFCB42)"></i>버터</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#B9B7FF,#5B5BFF 50%,#3F3FD6)"></i>포인트 블루</span>
+    <span><i style="background:radial-gradient(circle at 34% 28%,#fff,#F3F2FA 50%,#DAD6EA)"></i>바탕 회보라</span>
+    <span class="jj"><i style="background:#4A3AFF;box-shadow:0 0 0 2px #fff"></i>인디고 #4A3AFF · 보상</span>
+    <span class="jj"><i style="background:#C6F432"></i>라임 · 보상 버튼</span>
+    <span class="jj"><i style="background:#FF6AD5"></i>핑크 · 톱니 배지</span>
+    <span class="fnt">글꼴 Pretendard 800 · 600</span>
+    <span class="fnt num">숫자 M PLUS Rounded 1c 240</span>
+    <span class="fnt"><span class="an" style="letter-spacing:.04em">ANTON</span>&nbsp;·&nbsp;<span class="han">검은고딕</span>&nbsp;(보상 순간만)</span>
+  </div>
+</header>
+
+<div class="sec"><h2>필수 화면</h2><span>① 메인 · ② 성적노트 · ③ 퇴근 미션 · ④ 어드민</span><b class="swipe">옆으로 넘겨 보기 →</b></div>
+<div class="row">
+  <!-- ① 메인 -->
+  <section class="col"><h3><b>1</b>메인 <span class="md">평소 · B</span></h3><p class="note">캐릭터가 주인공. 그 아래는 오늘 할 일 하나와 다음 아이템까지 남은 거리만.</p>
+    <div class="ph"><div class="scr s-home">
+      <div class="bar"><div><div class="hello">11월 25일 수요일</div><div class="name">김예시</div></div><div class="acts"><span class="coin" aria-label="별 240"><i class="ic" data-ic="coin"></i>240</span><button class="gearb" type="button" id="goSet" aria-label="설정" style="color:var(--sub)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M8.6 1.8h2.8l.4 2.2 1.5.7 1.9-1.2 2 2-1.2 1.9.7 1.5 2.2.4v2.8l-2.2.4-.7 1.5 1.2 1.9-2 2-1.9-1.2-1.5.7-.4 2.2H8.6l-.4-2.2-1.5-.7-1.9 1.2-2-2 1.2-1.9-.7-1.5-2.2-.4V8.6l2.2-.4.7-1.5-1.2-1.9 2-2 1.9 1.2 1.5-.7z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/><circle cx="10" cy="10" r="2.8" fill="none" stroke="currentColor" stroke-width="1.7"/></svg></button></div></div>
+      <div class="hero"><span class="say">오늘 할 일 <b class="num">1</b>개 남음</span><span class="lv">Lv.3</span><div class="ped"></div><div class="ch" data-ch></div>
+        <div class="todo"><small>오늘 할 일</small><div class="big">1<em>개 남음</em></div>
+          <ul><li><i class="dot done"><svg viewBox="0 0 12 12"><path d="M2.5 6.2l2.3 2.3 4.7-5" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></i><span>숙제 · 정치 3주차 복습</span><b>제출함</b></li>
+          <li class="now"><i class="dot yet"></i><span>퇴근 미션 20문제</span><b>수업 끝</b></li></ul></div>
+      </div>
+      <div class="card mission"><div class="tile"><i class="ic" data-ic="house"></i></div><div class="tx"><small>오늘 할 일</small><strong>퇴근 미션 20문제</strong></div><button class="go" type="button">시작</button></div>
+      <div class="card next"><div class="rowx"><span>다음 아이템까지</span><b><span class="num">2</span>회 남음</b></div><div class="track"><div class="prog"><i style="width:60%"></i></div><i class="ic" data-ic="gift"></i></div></div>
+      <div class="stats">
+        <div class="card"><i class="ic" data-ic="flame"></i><div><small>연속 출석</small><b><span class="num">4</span>일</b></div></div>
+        <div class="card"><i class="ic" data-ic="coin"></i><div><small>모은 별</small><b><span class="star">★</span> <span class="num">240</span></b></div></div>
+      </div>
+      <div class="card rkmini" id="goRank" role="button" tabindex="0" aria-label="이번 주 랭킹 보기"><div class="tx"><small>이번 주 랭킹</small><strong>나 <span class="num">3</span>위</strong></div>
+        <div class="three">
+          <div class="p p1"><i>1</i><div class="ch" data-ch data-color="mint" data-hat="crown" data-glasses="round" data-charm="star" data-noshadow></div><span>이샘플</span></div>
+          <div class="p"><i>2</i><div class="ch" data-ch data-color="peach" data-hat="headphones" data-glasses="none" data-charm="bolt" data-noshadow></div><span>박테스트</span></div>
+          <div class="p me"><i>3</i><div class="ch" data-ch data-noshadow></div><span>나</span></div>
+        </div></div>
+      <div class="sp"></div>
+      <nav class="tabbar" data-tabbar="home"></nav>
+    </div></div>
+  </section>
+
+  <!-- ② 성적노트 -->
+  <section class="col"><h3><b>2</b>성적노트 <span class="md">평소 · B</span></h3><p class="note">숫자 3개, 추이, 테스트·숙제가 카드 한 장씩. 몽글이는 제목 옆에 작게만.</p>
+    <div class="ph"><div class="scr s-note">
+      <div class="bar"><div class="ttl">성적노트</div><div class="mini"><div class="ch" data-ch data-noshadow></div><span class="pillw">11월</span></div></div>
+      <div class="chips2" id="subj"><button class="on" type="button">정치</button><button type="button">경제</button><button type="button">현대사회</button><button type="button">지리</button><button type="button">역사</button></div>
+      <div class="card sum">
+        <div><small>평균 정답률</small><b>78<em>%</em></b></div>
+        <div><small>최근 테스트</small><b>17<em>/20</em></b></div>
+        <div><small>숙제</small><b>5<em>/6</em></b></div>
+      </div>
+      <div class="card graph"><div class="hd"><strong>점수 추이</strong><span class="lg"><i></i>나<i class="av"></i>반 평균</span></div>
+        <svg viewBox="0 0 280 92" role="img" aria-label="최근 5번 테스트의 내 점수와 반 평균">
+          <path d="M8 20H272M8 46H272M8 72H272" style="stroke:var(--line)" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M18 59L79 46L140 52.5L201 39.5L262 26.5V72H18Z" fill="url(#gArea)"/>
+          <path d="M18 56.4L79 51.2L140 48.6L201 46L262 43.4" fill="none" style="stroke:var(--avg)" stroke-width="3" stroke-linecap="round" stroke-dasharray="5 6"/>
+          <path d="M18 59L79 46L140 52.5L201 39.5L262 26.5" fill="none" stroke="url(#gT)" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <g fill="url(#gBall)" style="stroke:var(--card)" stroke-width="2.5"><circle cx="18" cy="59" r="5.5"/><circle cx="79" cy="46" r="5.5"/><circle cx="140" cy="52.5" r="5.5"/><circle cx="201" cy="39.5" r="5.5"/><circle cx="262" cy="26.5" r="7"/></g>
+          <rect x="226" y="1" width="34" height="17" rx="8.5" class="th-fill"/><text x="243" y="13.5" text-anchor="middle" font-size="11" font-weight="800" class="th-card" font-family="'M PLUS Rounded 1c',Pretendard,sans-serif">85%</text>
+          <g font-size="10" font-weight="600" class="th-sub" text-anchor="middle" font-family="'M PLUS Rounded 1c',Pretendard,sans-serif"><text x="18" y="89">10/21</text><text x="79" y="89">10/28</text><text x="140" y="89">11/4</text><text x="201" y="89">11/11</text><text x="262" y="89">11/18</text></g>
+        </svg>
+      </div>
+      <div class="card list t3"><div class="hd"><strong>테스트</strong><span>전체 보기</span></div>
+        <div class="tr"><div><b>정치 3주차 소테스트</b><small>11/18 · 3등 / 18명</small></div><span class="sc">17<em>/20</em></span></div>
+        <div class="tr"><div><b>정치 2주차 소테스트</b><small>11/11 · 6등 / 18명</small></div><span class="sc">15<em>/20</em></span></div>
+        <div class="tr"><div><b>10월 월말 테스트</b><small>10/30 · 4등 / 18명</small></div><span class="sc">82<em>/100</em></span></div>
+      </div>
+      <div class="card list t2"><div class="hd"><strong>숙제</strong><span class="num">5 / 6</span></div>
+        <div class="tr"><div><b>정치 3주차 복습 프린트</b><small>11/20까지</small></div><span class="bdg ok">제출 완료</span></div>
+        <div class="tr"><div><b>정치 4주차 예습 노트</b><small>11/27까지</small></div><span class="bdg no">미제출</span></div>
+      </div>
+      <div class="sp"></div>
+      <nav class="tabbar" data-tabbar="note"></nav>
+    </div></div>
+  </section>
+
+  <!-- ③ 퇴근 미션 -->
+  <section class="col"><h3><b>3</b>퇴근 미션 <span class="md">평소 · B</span><span class="md j">정답 배지만 J</span></h3><p class="note">한 화면에 한 문제. 맞히면 아래에서 피드백이 올라오고, 「정답!」에만 핑크 톱니 배지(보기를 눌러 보세요).</p>
+    <div class="ph"><div class="scr s-quiz">
+      <div class="bar"><button class="x" type="button" aria-label="닫기"><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3L3 13" stroke="#55526F" stroke-width="2.4" stroke-linecap="round"/></svg></button><b>퇴근 미션</b><span style="width:36px"></span></div>
+      <div class="qprog"><div class="rowx"><strong>집까지 <span class="num">7</span>문제</strong><span class="c">13 / 20</span></div><div class="track"><div class="prog"><i style="width:65%"></i></div><i class="ic" data-ic="house"></i></div></div>
+      <div class="card qcard"><span class="tag">일본 지리</span><div class="q ja" lang="ja">長崎県</div><p>어느 지방에 속할까?</p></div>
+      <div class="opts" id="opts">
+        <button class="opt" type="button"><span class="no num">1</span><span class="tx"><b class="ja" lang="ja">中国地方</b><small>주고쿠 지방</small></span></button>
+        <button class="opt ok" type="button" aria-pressed="true" data-right><span class="no num">2</span><span class="tx"><b class="ja" lang="ja">九州地方</b><small>규슈 지방</small></span><i class="ic" data-ic="check"></i></button>
+        <button class="opt" type="button"><span class="no num">3</span><span class="tx"><b class="ja" lang="ja">近畿地方</b><small>긴키 지방</small></span></button>
+        <button class="opt" type="button"><span class="no num">4</span><span class="tx"><b class="ja" lang="ja">四国地方</b><small>시코쿠 지방</small></span></button>
+      </div>
+      <div class="sp"></div>
+      <div class="sheet" id="sheet"><div class="fb">
+        <svg class="gear" viewBox="0 0 72 72" role="img" aria-label="정답!"><g class="gpop"><g class="spin"><use href="#scal" width="72" height="72" fill="#FF6AD5"/></g><text class="han" x="36" y="42" text-anchor="middle" font-size="17" fill="#0B0B14" transform="rotate(-10 36 36)">정답!</text></g></svg>
+        <div class="t"><strong><span class="ja" lang="ja">長崎県</span> = 규슈 지방</strong><span><b>★ +2</b> · 첫 시도에 맞힘</span></div>
+        <div class="ch" data-ch data-mood="happy" data-noshadow></div></div><button class="btn" type="button">다음</button></div>
+    </div></div>
+  </section>
+
+  <!-- ④ 어드민 -->
+  <section class="col"><h3><b>4</b>어드민 <span class="md">평소 · B</span><span style="font-size:12.5px;font-weight:600;color:var(--sub)">선생님 PC 화면</span></h3><p class="note" style="max-width:640px">업무 화면이라 장식은 뺐습니다. 흰 카드·큰 숫자·얇은 선, 같은 숫자 글꼴과 포인트 블루. 다크 모드에서도 같은 구조(검색·반 필터 동작).</p>
+    <div class="pc">
+      <div class="chrome"><i style="background:#FF9C8A"></i><i style="background:#FFE582"></i><i style="background:#A3ECCF"></i><span class="url">학습 허브 · 선생님 화면 · 퇴근 미션</span></div>
+      <div class="pcb">
+        <aside class="side">
+          <div class="brand"><span class="mark"></span>선생님 화면</div>
+          <a>답안 입력</a>
+          <a>문항 분석</a>
+          <a>숙제</a>
+          <a>시험</a>
+          <a>학생</a>
+          <a class="on" aria-current="page">퇴근 미션</a>
+          <a>QnA<em>2</em></a>
+          <div class="me"><b>오늘 수업 2개</b>개념반 · 단풀반<br>남은 학생 4명</div>
+        </aside>
+        <div class="main">
+          <div class="mh"><div><h4>퇴근 미션</h4><p>11월 25일 수요일 · 일본 지리 20문제</p></div><button class="btn" type="button">문제 세트 바꾸기</button></div>
+          <div class="kpis">
+            <div class="card kpi"><small>오늘 통과</small><b>14<em> / 18명</em></b><div class="mini"><i style="width:77.8%"></i></div></div>
+            <div class="card kpi"><small>미제출 숙제</small><b class="warn">6<em>건</em></b><span>개념반 4 · 단풀반 2</span></div>
+            <div class="card kpi"><small>답 안 한 질문</small><b>2<em>개</em></b><span>가장 오래된 것 어제</span></div>
+            <div class="card kpi"><small>이번 주 테스트</small><b>1<em>회</em></b><span>금요일 · 정치 소테스트</span></div>
+          </div>
+          <div class="low">
+            <div class="card tbl"><div class="hd"><strong>오늘의 퇴근 미션</strong><span id="cnt">6명</span></div>
+              <div class="tools">
+                <label class="search"><svg viewBox="0 0 16 16" aria-hidden="true"><circle cx="7" cy="7" r="4.6" fill="none" stroke="#8F8CA6" stroke-width="1.8"/><path d="M10.4 10.4L13.6 13.6" stroke="#8F8CA6" stroke-width="1.8" stroke-linecap="round"/></svg><input id="q" type="search" placeholder="이름 검색" aria-label="이름 검색" autocomplete="off"></label>
+                <div class="fchips" id="fcls"><button class="on" type="button" data-cls="">전체<b>6</b></button><button type="button" data-cls="개념반">개념반<b>4</b></button><button type="button" data-cls="단풀반">단풀반<b>2</b></button></div>
+              </div>
+              <table>
+                <colgroup><col style="width:100px"><col style="width:64px"><col style="width:92px"><col style="width:72px"><col style="width:84px"><col></colgroup>
+                <thead><tr><th>이름</th><th>반</th><th>첫 시도 정답</th><th>도전 횟수</th><th>걸린 시간</th><th>상태</th></tr></thead>
+                <tbody id="tb">
+                  <tr><td><i class="av" style="background:var(--lav)"></i>김예시</td><td>개념반</td><td class="n">18 / 20</td><td class="n">2회</td><td class="n">6분 12초</td><td><span class="bdg ok">통과</span></td></tr>
+                  <tr><td><i class="av" style="background:var(--mint)"></i>이샘플</td><td>개념반</td><td class="n">20 / 20</td><td class="n">1회</td><td class="n">3분 40초</td><td><span class="bdg ok">통과</span></td></tr>
+                  <tr><td><i class="av" style="background:var(--peach)"></i>박테스트</td><td>단풀반</td><td class="n">15 / 20</td><td class="n">3회</td><td class="n">9분 05초</td><td><span class="bdg ok">통과</span></td></tr>
+                  <tr><td><i class="av" style="background:var(--sky)"></i>최더미</td><td>개념반</td><td class="n">12 / 20</td><td class="n">2회</td><td class="n">7분 30초</td><td><span class="bdg ing">푸는 중</span></td></tr>
+                  <tr><td><i class="av" style="background:var(--butter)"></i>정연습</td><td>단풀반</td><td class="n">16 / 20</td><td class="n">1회</td><td class="n">4분 18초</td><td><span class="bdg ing">푸는 중</span></td></tr>
+                  <tr><td><i class="av" style="background:#DAD6EA"></i>한견본</td><td>개념반</td><td class="n z">—</td><td class="n z">0회</td><td class="n z">—</td><td><span class="bdg yet">아직</span></td></tr>
+                  <tr class="empty" hidden><td colspan="6">맞는 학생이 없어요</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card code"><div class="hd"><strong>오늘 암호</strong><span>가짜 예시</span></div>
+              <div class="digits" aria-label="오늘 암호 4827"><b>4</b><b>8</b><b>2</b><b>7</b></div>
+              <small>학생이 입력하면 미션 시작</small>
+              <div class="qr" id="qr" role="img" aria-label="QR 자리"></div>
+              <small>QR 자리</small>
+              <button class="btn sub" type="button">암호 새로 만들기</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="sec"><h2>추가 화면</h2><span>⑤ 클리어 · ⑥ 꾸미기 · ⑦ 수업 맵 · ⑧ 랭킹 · ⑨ 설정 · ＋ 몽글이</span><b class="swipe">옆으로 넘겨 보기 →</b></div>
+<div class="row" id="extra">
+  <!-- ⑤ 클리어 — 보상 순간(J) : 46 + 290 + 30 + 50 + 110 + 50 + 8 + 50 = 634 ≤ 700 -->
+  <section class="col"><h3><b class="jn">5</b>클리어 <span class="md j">보상 · J</span><small>화면을 누르면 다시</small></h3><p class="note">전부 맞히면 화면이 인디고로 바뀌고, 몽글이가 떨어져 「퇴근 ●K!」의 O 자리에 착지합니다.</p>
+    <div class="ph"><div class="scr s-clear jx play" id="clr">
+      <div class="jtb"><span class="x" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M2 2l8 8M10 2L2 10" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg></span><span class="tab">퇴근 완료</span><span class="pill">★ 270</span></div>
+      <div class="ko">
+        <!-- Anton 186px: 대문자 높이 160(기준선 262 → 위 102). 몽글이 폭 210 → 몸통 156×151, 몸 바닥 = 기준선 -->
+        <svg class="jsvg" viewBox="0 0 340 290" width="340" height="290" role="img" aria-label="퇴근 OK!">
+          <use href="#scrA" x="-14" y="-8" width="50" height="82"/>
+          <rect class="cf" x="146" y="32" width="26" height="10" rx="5" fill="#C6F432" transform="rotate(-24 159 37)"/>
+          <rect class="cf" x="62" y="12" width="20" height="9" rx="4.5" fill="#FF6AD5" transform="rotate(32 72 16)"/>
+          <use class="cf" href="#ast" x="112" y="0" width="20" height="20" style="color:#fff"/>
+          <use class="cf" href="#ast" x="160" y="76" width="16" height="16" style="color:#C6F432"/>
+          <path d="M14 280C80 270 150 288 220 276S290 274 326 280" fill="none" stroke="#0B0B14" stroke-width="7" stroke-linecap="round"/>
+          <text class="han lt lt3" x="184" y="94" font-size="42" fill="#fff">퇴근</text>
+          <text class="an lt lt1" x="184" y="262" font-size="186" textLength="87.8" lengthAdjust="spacingAndGlyphs" fill="#fff">K</text>
+          <text class="an lt lt2" x="277" y="262" font-size="186" textLength="42.6" lengthAdjust="spacingAndGlyphs" fill="#fff">!</text>
+          <g transform="translate(305 40) rotate(12)"><g class="wob"><use href="#scal" x="-31" y="-31" width="62" height="62" fill="#FF6AD5"/><text text-anchor="middle" y="5" font-size="14" font-weight="900" fill="#0B0B14">★ +30</text></g></g>
+        </svg>
+        <div class="ch drop" data-ch data-mood="happy" data-hat="crown" data-noshadow></div>
+      </div>
+      <p class="say">20문제 전부 정답. <b>집에 가도 됩니다.</b></p>
+      <div class="rec"><div><b>6분 12초</b><span>걸린 시간</span></div><div><b>1회</b><span>도전 횟수</span></div><div><b>4일</b><span>연속 출석</span></div></div>
+      <div class="rw"><div class="tile" data-item="crown"><svg class="ngear" viewBox="0 0 40 40" aria-hidden="true"><g class="wob"><use href="#scal" width="40" height="40" fill="#FF6AD5"/><text class="an" x="20" y="25" text-anchor="middle" font-size="13" fill="#0B0B14" letter-spacing=".5">NEW</text></g></svg></div>
+        <div class="t"><small>새 아이템 <span class="gt">힙</span></small><strong>왕관 획득</strong><span><b>★ +30</b> · 첫 도전 통과 5번째</span></div></div>
+      <button class="jbtn lime" type="button" id="goCloset">꾸미러 가기</button>
+      <div style="flex:none;height:8px"></div>
+      <button class="jbtn line" type="button">퇴근증 보기</button>
+      <div class="sp"></div>
+    </div></div>
+  </section>
+
+  <!-- ⑥ 꾸미기 -->
+  <section class="col" id="closet"><h3><b>6</b>꾸미기 <span class="md">평소 · B</span><small>눌러 보세요</small></h3><p class="note">등급 2가지: <b>희귀</b>(성적으로 얻음, 보라·금 테두리) · <b>힙</b>(성실하게 해서 얻음, 라임 꼬리표). 헤드폰·후드·블랙 선글라스·체인 키링 추가. 조건은 예시.</p>
+    <div class="ph"><div class="scr s-closet">
+      <div class="bar"><div class="ttl">꾸미기</div><span class="coin" aria-label="별 240"><i class="ic" data-ic="coin"></i>240</span></div>
+      <div class="pv" id="pv"><span class="hint">미리 보기</span><div class="ped"></div><div class="ch" id="pvch" data-ch></div></div>
+      <div class="seg" id="tabs"></div>
+      <div class="gfil" id="gfil"><button type="button" data-g="" aria-pressed="true">전체</button><button type="button" class="g-rare" data-g="rare" aria-pressed="false"><i></i>희귀</button><button type="button" class="g-hip" data-g="hip" aria-pressed="false"><i></i>힙</button><span class="why">희귀 = 성적으로<br>힙 = 성실하게</span></div>
+      <div class="grid" id="grid"></div>
+      <nav class="tabbar" data-tabbar="home"></nav>
+    </div></div>
+  </section>
+
+  <!-- ⑦ 수업 맵 -->
+  <section class="col"><h3><b>7</b>수업 맵 <span class="md">평소 · B</span></h3><p class="note">커리큘럼을 징검다리처럼. 회차를 끝낼 때마다 한 칸씩, 끝까지 가면 완강 보상.</p>
+    <div class="ph"><div class="scr s-map">
+      <div class="bar"><span class="pillw">개념반 · 정치</span><span class="pillw num">5 / 8</span></div>
+      <div class="hdm"><strong>완강까지 <span class="num">3</span>회 남음</strong><div class="prog"><i style="width:62.5%"></i></div></div>
+      <div class="path">
+        <svg class="ln" viewBox="0 0 340 420" aria-hidden="true">
+          <path d="M58 380C150 380 284 388 284 326C284 250 56 316 56 232C56 146 284 210 284 134C284 88 234 62 172 56" fill="none" style="stroke:var(--road-edge)" stroke-width="30" stroke-linecap="round"/>
+          <path d="M58 374C150 374 284 382 284 320C284 244 56 310 56 226C56 140 284 204 284 128C284 82 234 56 172 50" fill="none" style="stroke:var(--road)" stroke-width="30" stroke-linecap="round"/>
+          <path d="M58 374C150 374 284 382 284 320C284 244 56 310 56 226C56 140 284 204 284 128C284 82 234 56 172 50" fill="none" style="stroke:var(--road-dot)" stroke-width="5" stroke-linecap="round" stroke-dasharray="1 13"/>
+          <path class="done-road" d="M58 374C150 374 284 382 284 320C284 244 56 310 56 226C56 140 284 204 284 128C284 82 234 56 172 50" fill="none" stroke="#8FE3C2" stroke-width="12" stroke-linecap="round" pathLength="100" stroke-dasharray="62.5 100"/>
+        </svg>
+        <div class="nd done" style="left:58px;top:374px">1<i class="ic bd2" data-ic="check"></i></div>
+        <div class="nd done" style="left:176px;top:373px">2<i class="ic bd2" data-ic="check"></i></div>
+        <div class="nd done" style="left:281px;top:334px">3<i class="ic bd2" data-ic="check"></i></div>
+        <div class="nd done" style="left:200px;top:278px">4<i class="ic bd2" data-ic="check"></i></div>
+        <div class="nd done" style="left:84px;top:263px">5<i class="ic bd2" data-ic="check"></i></div>
+        <div class="nd now" style="left:102px;top:182px">6</div>
+        <div class="nd lock" style="left:218px;top:169px">7<i class="ic bd2" data-ic="lock"></i></div>
+        <div class="nd lock" style="left:275px;top:98px">8<i class="ic bd2" data-ic="lock"></i></div>
+        <div class="nd goal" style="left:172px;top:50px"><i class="ic" data-ic="gift"></i><span class="cap">완강 보상</span></div>
+        <span class="say" style="left:102px;top:106px">이번 주</span>
+        <div class="ch" data-ch style="left:6px;top:140px"></div>
+      </div>
+      <nav class="tabbar" data-tabbar="class"></nav>
+    </div></div>
+  </section>
+
+  <!-- ⑧ 랭킹 · 이번 주 — 보상 순간(J) : 46 + 196 + 8 + 278 + 12 + 56 + 사이 + 50 + 18 = 664 ≤ 700 -->
+  <section class="col" id="rank"><h3><b class="jn">8</b>랭킹 · 이번 주 <span class="md j">보상 · J</span></h3><p class="note">TOP 5 포스터. 줄마다 그 학생이 꾸민 몽글이, 1위는 왕관을 쓰고 O 자리에. 4위는 캐릭터를 끈 학생 예시(이니셜), 맨 아래는 내 몽글이.</p>
+    <div class="ph"><div class="scr s-rank jx">
+      <div class="jtb"><span class="x" aria-hidden="true"><svg viewBox="0 0 12 12"><path d="M8 2L4 6l4 4" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></span><span class="tab">랭킹</span><span class="pill">11/23–29</span></div>
+      <div class="rk-top">
+        <!-- Anton 112px: 대문자 높이 96(기준선 168 → 위 72). 몽글이 폭 134 → 몸통 100×96 -->
+        <svg class="jsvg" viewBox="0 0 340 196" width="340" height="196" role="img" aria-label="이번 주 퇴근 미션 TOP 5">
+          <text class="han" x="22" y="34" font-size="22" fill="#fff">이번 주 퇴근 미션</text>
+          <rect x="196" y="44" width="22" height="9" rx="4.5" fill="#FF6AD5" transform="rotate(-20 207 48)"/>
+          <use href="#ast" x="226" y="52" width="16" height="16" style="color:#C6F432"/>
+          <text class="an" x="27" y="168" font-size="112" textLength="44.3" lengthAdjust="spacingAndGlyphs" fill="#fff">T</text>
+          <text class="an" x="183" y="168" font-size="112" textLength="52.9" lengthAdjust="spacingAndGlyphs" fill="#fff">P</text>
+          <text class="an" x="249" y="168" font-size="112" textLength="55.3" lengthAdjust="spacingAndGlyphs" fill="#C6F432">5</text>
+          <path d="M18 186C80 178 150 192 220 182S290 180 322 186" fill="none" stroke="#0B0B14" stroke-width="6" stroke-linecap="round"/>
+          <g transform="translate(306 40) rotate(-10)"><g class="wob"><use href="#scal" x="-27" y="-27" width="54" height="54" fill="#FF6AD5"/><text class="han" text-anchor="middle" y="7" font-size="19" fill="#0B0B14">1위</text></g></g>
+        </svg>
+        <div class="ch" data-ch data-color="mint" data-hat="crown" data-glasses="round" data-charm="star" data-noshadow></div>
+      </div>
+      <div class="rk-list">
+        <div class="rr first"><span class="n">1</span><div class="ch" data-ch data-color="mint" data-hat="crown" data-glasses="round" data-charm="star" data-noshadow></div><div class="who"><b>이샘플</b><small>첫 도전 통과 · 평균 3분 40초</small></div><span class="v">5<em>회</em></span></div>
+        <div class="rr"><span class="n">2</span><div class="ch" data-ch data-color="peach" data-hat="headphones" data-glasses="none" data-charm="bolt" data-noshadow></div><div class="who"><b>박테스트</b><small>첫 도전 통과 · 평균 5분 02초</small></div><span class="v">4<em>회</em></span></div>
+        <div class="rr me"><span class="n">3</span><div class="ch" data-ch data-noshadow></div><div class="who"><b>김예시 <i>나</i></b><small>첫 도전 통과 · 평균 6분 12초</small></div><span class="v">4<em>회</em></span></div>
+        <div class="rr"><span class="n">4</span><div class="ch" data-ch data-color="sky" data-off="1" data-ini="연" data-noshadow></div><div class="who"><b>정연습</b><small>첫 도전 통과 · 평균 4분 18초</small></div><span class="v">3<em>회</em></span></div>
+        <div class="rr"><span class="n">5</span><div class="ch" data-ch data-color="butter" data-hat="hood" data-glasses="shade" data-charm="chain" data-noshadow></div><div class="who"><b>최더미</b><small>첫 도전 통과 · 평균 7분 30초</small></div><span class="v">3<em>회</em></span></div>
+      </div>
+      <div class="myrk"><div class="ch" data-ch data-noshadow></div><div><small>내 순위</small><b>3위</b></div><p>2위와 같은 4회.<br>1분 10초 차이.</p></div>
+      <div class="sp"></div>
+      <button class="jbtn lime" type="button">오늘 퇴근 미션 시작</button>
+      <div style="flex:none;height:18px"></div>
+    </div></div>
+  </section>
+
+  <!-- ⑨ 설정 — 평소(B) : 58 + 84 + 40 + 222 + 40 + 104 + 40 + 74 = 662 ≤ 700 -->
+  <section class="col" id="setting"><h3><b>9</b>설정 <span class="md">평소 · B</span><small>토글을 눌러 보세요</small></h3><p class="note">메인 오른쪽 위 톱니에서 들어옵니다. 「캐릭터 보기」를 끄면 이 페이지의 학생 화면이 전부 이니셜 동그라미로 바뀝니다.</p>
+    <div class="ph"><div class="scr s-set">
+      <div class="bar"><button class="gearb" type="button" aria-label="뒤로" style="color:var(--ink)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M13 4L7 10l6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button><div class="ttl">설정</div><span style="width:36px"></span></div>
+      <div class="card set-me"><div class="ch" data-ch data-noshadow></div><div><b>김예시</b><small>개념반 · 단풀반</small></div><span class="lvp">Lv.3</span></div>
+      <div class="set-h">화면</div>
+      <div class="card set-c">
+        <div class="srow tall"><div class="tx"><b>캐릭터 보기</b><small>캐릭터를 끄면 화면이 더 간결해져요.<br>모은 아이템은 그대로 남아요.</small></div><button type="button" class="sw" role="switch" aria-checked="true" data-char-toggle aria-label="캐릭터 보기"></button></div>
+        <div class="srow"><div class="tx"><b>화면 밝기</b><small>밤에는 다크가 눈이 편해요</small></div><div class="seg3" id="seg3"><button type="button" data-th="auto" aria-pressed="false">자동</button><button type="button" data-th="light" aria-pressed="false">라이트</button><button type="button" data-th="dark" aria-pressed="false">다크</button></div></div>
+        <div class="srow"><div class="tx"><b>랭킹에 별명으로 표시</b><small>다른 학생에게 이름 대신 별명</small></div><button type="button" class="sw" role="switch" aria-checked="false" data-flip aria-label="랭킹에 별명으로 표시"></button></div>
+      </div>
+      <div class="set-h">미리 보기</div>
+      <div class="card set-pv"><div class="pvon"><div class="ch" data-ch data-keep data-noshadow></div><div><b>켬</b><small>꾸민 몽글이</small></div></div><div class="pvoff"><div class="ch" data-ch data-off="1" data-ini="예" data-noshadow></div><div><b>끔</b><small>이니셜만</small></div></div></div>
+      <div class="set-h">알림</div>
+      <div class="card set-c"><div class="srow"><div class="tx"><b>퇴근 미션 시작 알림</b><small>수업 끝나기 5분 전</small></div><button type="button" class="sw" role="switch" aria-checked="true" data-flip aria-label="퇴근 미션 시작 알림"></button></div></div>
+      <div class="sp"></div>
+    </div></div>
+  </section>
+
+  <!-- ＋ 몽글이 캐릭터 시트 -->
+  <section class="col"><h3><b>＋</b>몽글이 <small>표정을 눌러 보세요</small></h3><p class="note">점토 재질을 크게: 안쪽 그림자·반사광·표면 결·눈 하이라이트·접촉 그림자. 꾸미기에서 입힌 아이템이 그대로 따라옵니다.</p>
+    <div class="cs">
+      <div class="stage"><span class="lbl">몽글이 <b>Lv.3</b></span><div class="ped"></div><div class="ch" id="bigch" data-ch></div></div>
+      <div class="moods" id="moods">
+        <button type="button" class="on" data-m=""><div class="ch" data-ch data-noshadow></div>기본</button>
+        <button type="button" data-m="happy"><div class="ch" data-ch data-mood="happy" data-noshadow></div>기쁨</button>
+        <button type="button" data-m="wow"><div class="ch" data-ch data-mood="wow" data-noshadow></div>놀람</button>
+      </div>
+      <div class="mat"><span>점토 결 (아주 약한 노이즈)</span><span>몸 아래 안쪽 그림자</span><span>오른쪽 아래 반사광</span><span>눈 하이라이트 2개</span><span>팔·발 접촉 그림자</span><span>바닥 그림자 2겹</span><span>말랑 대기 · 깜빡임</span></div>
+    </div>
+  </section>
+</div>
+<p class="foot">※ 캐릭터와 아이콘은 SVG 그라데이션·필터로 만든 「클레이」 예시입니다. 최종본은 실제 3D 렌더(PNG)로 바꿔 끼울 수 있게 「몸 + 모자 + 안경 + 키링」을 따로 겹치는 구조로 만들었습니다.<br>※ 인디고 포스터(클리어·랭킹)와 핑크 톱니 배지는 보상 순간에만 씁니다. 매일 보는 화면에 섞지 않아야 「끝냈다」는 느낌이 커집니다. 랭킹은 실제 운영 때 이름 대신 별명 표시를 고를 수 있게 하는 것을 권합니다.</p>
+
+<script>
+/* ════ 1. 색·그라데이션·필터 정의 (한 번만 넣고 모든 SVG가 같이 씀) ════ */
+var COL = {
+  lav:    { n:'라벤더', hi:'#F1EDFF', mid:'#BDAEFF', lo:'#8C78F0', sh:'#4B36B8', rim:'#E2F1FF' },
+  peach:  { n:'피치',   hi:'#FFF0E7', mid:'#FFBFA3', lo:'#FF8E6E', sh:'#C9502A', rim:'#FFF4D9' },
+  mint:   { n:'민트',   hi:'#E9FEF5', mid:'#A3ECCF', lo:'#5ECFA4', sh:'#178A63', rim:'#E2F4FF' },
+  sky:    { n:'스카이', hi:'#E9F6FF', mid:'#ABD9FF', lo:'#6FB2F3', sh:'#2A6DBC', rim:'#F1EAFF' },
+  butter: { n:'버터',   hi:'#FFFCE6', mid:'#FFE582', lo:'#FFC83C', sh:'#B87A00', rim:'#FFF3E6' }
+};
+/* 몸: 머리 겸 몸통인 둥근 찹쌀떡 — 위가 넓고 둥글게(머리가 큰 비율) */
+var BODY = 'M110 46C162 46 194 84 192 130C190 174 158 204 110 204C62 204 30 174 28 130C26 84 58 46 110 46Z';
+var FEET = '<ellipse cx="84" cy="204" rx="20" ry="11"/><ellipse cx="136" cy="204" rx="20" ry="11"/>';
+var EYE_L = [83, 136], EYE_R = [137, 136];
+function fx(n){ return +(+n).toFixed(2); }
+
+function lin(id, a, b){ return '<linearGradient id="'+id+'" x1=".15" y1="0" x2=".85" y2="1"><stop offset="0" stop-color="'+a+'"/><stop offset="1" stop-color="'+b+'"/></linearGradient>'; }
+function rad(id, a, b, c){ return '<radialGradient id="'+id+'" cx=".34" cy=".26" r=".9"><stop offset="0" stop-color="'+a+'"/><stop offset=".42" stop-color="'+b+'"/><stop offset="1" stop-color="'+c+'"/></radialGradient>'; }
+function fade(id, col, op){ return '<radialGradient id="'+id+'"><stop offset="0" stop-color="'+col+'" stop-opacity="'+op+'"/><stop offset="1" stop-color="'+col+'" stop-opacity="0"/></radialGradient>'; }
+/* 점토 재질 필터: 안쪽 그림자(오른쪽 아래) + 안쪽 빛(왼쪽 위) + (선택) 아주 약한 표면 결 */
+function clay(id, shade, so, std, dx, dy, ho, grain){
+  var s = '<filter id="'+id+'" x="-15%" y="-15%" width="130%" height="130%" color-interpolation-filters="sRGB">' +
+    '<feGaussianBlur in="SourceAlpha" stdDeviation="'+std+'" result="b"/>' +
+    '<feOffset in="b" dx="'+(-dx)+'" dy="'+(-dy)+'" result="o1"/>' +
+    '<feComposite in="SourceAlpha" in2="o1" operator="out" result="m1"/>' +
+    '<feFlood flood-color="'+shade+'" flood-opacity="'+so+'" result="f1"/>' +
+    '<feComposite in="f1" in2="m1" operator="in" result="s1"/>' +
+    '<feOffset in="b" dx="'+fx(dx*0.6)+'" dy="'+fx(dy*0.6)+'" result="o2"/>' +
+    '<feComposite in="SourceAlpha" in2="o2" operator="out" result="m2"/>' +
+    '<feFlood flood-color="#ffffff" flood-opacity="'+ho+'" result="f2"/>' +
+    '<feComposite in="f2" in2="m2" operator="in" result="s2"/>' +
+    '<feMerge result="lit"><feMergeNode in="SourceGraphic"/><feMergeNode in="s1"/><feMergeNode in="s2"/></feMerge>';
+  if (grain) s +=
+    '<feTurbulence type="fractalNoise" baseFrequency="'+grain[0]+'" numOctaves="2" seed="8" result="n"/>' +
+    '<feColorMatrix in="n" type="matrix" values="1 0 0 0 0  1 0 0 0 0  1 0 0 0 0  0 0 0 0 1" result="g"/>' +
+    '<feComposite in="lit" in2="g" operator="arithmetic" k1="0" k2="1" k3="'+grain[1]+'" k4="'+fx(-grain[1]/2)+'" result="lg"/>' +
+    '<feComposite in="lg" in2="SourceAlpha" operator="in"/>';
+  return s + '</filter>';
+}
+function defsSVG(){
+  var s = '<defs>' +
+    fade('gHi', '#ffffff', 0.95) + fade('gCheek', '#FF6F96', 0.62) + fade('gGround', '#2B1F6B', 0.26) +
+    lin('gGold', '#FFEE9C', '#FFB81F') + lin('gGoldD', '#FFCB42', '#EE9A00') +
+    lin('gBlue', '#8E9CFF', '#4756F2') + lin('gBlueD', '#5463F5', '#2F3BC4') +
+    lin('gCoral', '#FFA796', '#F0604F') + lin('gCream', '#FFFFFF', '#E4DEF5') +
+    lin('gDark', '#5A4FA3', '#1D1942') + lin('gPink', '#FFB3CC', '#F45C92') +
+    lin('gMint', '#9DF3D0', '#2CC08A') + lin('gSkyB', '#A9DCFF', '#3D8BEA') +
+    lin('gLeaf', '#A6EFBF', '#3CBF7E') + lin('gSilver', '#FBFAFF', '#AFA9C9') +
+    lin('gFlame', '#FFC052', '#FF5A3C') + lin('gLock', '#C9C3E6', '#8580A6') +
+    lin('gFrame', '#8A7CFF', '#3B2FC2') + lin('gT', '#A3A1FF', '#4F4FF2') + lin('gTOff', '#E2DFEE', '#B3AFCA') +
+    rad('gEye', '#5D5491', '#2A2350', '#120F29') + rad('gBall', '#B9B7FF', '#6F6FFF', '#4343E0') +
+    '<linearGradient id="gArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5B5BFF" stop-opacity=".22"/><stop offset="1" stop-color="#5B5BFF" stop-opacity="0"/></linearGradient>' +
+    '<linearGradient id="gLens" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".42"/><stop offset=".5" stop-color="#fff" stop-opacity=".08"/><stop offset="1" stop-color="#C9D8FF" stop-opacity=".28"/></linearGradient>' +
+    clay('fIn', '#2B1F6B', 0.3, 5, 4, 6, 0.5, [0.9, 0.06]) + clay('fInS', '#2B1F6B', 0.3, 2.4, 2, 3, 0.5, [0.9, 0.05]) + clay('fInT', '#2B1F6B', 0.28, 1.2, 1, 1.5, 0.55) +
+    '<filter id="fBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3"/></filter>' +
+    '<filter id="fSoft" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="1.8"/></filter>' +
+    '<filter id="fWide" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5"/></filter>' +
+    '<filter id="fRim" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="4.5"/></filter>' +
+    '<clipPath id="cpBody"><path d="'+BODY+'"/></clipPath>' +
+    '<clipPath id="cpFeet">'+FEET+'</clipPath>' +
+    lin('gPhone', '#6E6C88', '#1F1D2C') + lin('gHood', '#7C7A98', '#363450') + lin('gLimeA', '#E6FF8A', '#93C400') +
+    '<mask id="mHood" maskUnits="userSpaceOnUse" x="0" y="0" width="220" height="240"><rect width="220" height="240" fill="#fff"/><ellipse cx="110" cy="140" rx="62" ry="54" fill="#000"/></mask>' +
+    '';
+  Object.keys(COL).forEach(function(k){
+    var c = COL[k];
+    s += rad('gB-'+k, c.hi, c.mid, c.lo) + lin('gF-'+k, c.mid, c.lo) + fade('gAO-'+k, c.sh, 0.5) +
+      clay('fB-'+k, c.sh, 0.42, 9, 7, 10, 0.55, [0.85, 0.07]) +
+      '<linearGradient id="gRim-'+k+'" x1="0" y1="0" x2="1" y2="1"><stop offset=".52" stop-color="'+c.rim+'" stop-opacity="0"/><stop offset=".82" stop-color="'+c.rim+'" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity=".95"/></linearGradient>';
+  });
+  return s + '</defs>';
+}
+
+/* ════ 2. 부품 ════ */
+function hl(cx, cy, rx, ry, rot, op){ return '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="url(#gHi)" opacity="'+op+'" transform="rotate('+rot+' '+cx+' '+cy+')"/>'; }
+function dot(cx, cy, r, op){ return '<circle cx="'+cx+'" cy="'+cy+'" r="'+r+'" fill="#fff" opacity="'+op+'"/>'; }
+function starPath(cx, cy, R, r){
+  var d = '', i, a, rr;
+  for (i = 0; i < 10; i++) { a = -Math.PI/2 + i*Math.PI/5; rr = i%2 ? r : R; d += (i ? 'L' : 'M') + (cx + rr*Math.cos(a)).toFixed(1) + ' ' + (cy + rr*Math.sin(a)).toFixed(1); }
+  return d + 'Z';
+}
+var CAP_DOME = 'M46 82C44 40 78 20 110 20C142 20 176 40 174 82C152 92 68 92 46 82Z';
+var CAP_BRIM = 'M100 82C130 70 168 72 180 86C182 92 176 95 170 95C144 97 122 92 100 82Z';
+var BEANIE = 'M44 86C42 40 78 18 110 18C142 18 178 40 176 86Z';
+var CROWN = 'M62 82L56 38L86 58L110 24L134 58L164 38L158 82Z';
+var PHONE_BAND = 'M34 122C26 60 64 40 110 40C156 40 194 60 186 122';
+var HOOD = 'M24 150C8 96 42 30 104 26Q118 20 132 15Q126 26 134 30C184 42 212 96 196 150Q184 158 170 150L50 150Q36 158 24 150Z';
+var SHADE = 'M50 124Q110 110 170 124L166 142Q158 156 132 152Q116 149 110 140Q104 149 88 152Q62 156 54 142Z';
+var PART = {
+  hat: {
+    cap: '<path d="'+CAP_DOME+'" fill="url(#gBlue)" filter="url(#fIn)"/>' +
+         '<path d="M110 23Q105 52 107 87M76 32Q66 56 70 86" stroke="#3341D8" stroke-opacity=".32" stroke-width="2" fill="none" stroke-linecap="round"/>' +
+         '<path d="'+CAP_BRIM+'" fill="url(#gBlueD)" filter="url(#fIn)"/>' +
+         '<path d="M110 81C136 72 162 74 174 85" stroke="#fff" stroke-opacity=".4" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+         '<circle cx="110" cy="21" r="6" fill="url(#gGold)" filter="url(#fInS)"/>' + dot(108, 19, 1.6, 0.9) + hl(80, 46, 18, 9, -28, 0.75) + dot(68, 56, 2.6, 0.8),
+    beanie: '<circle cx="110" cy="16" r="14" fill="url(#gCream)" filter="url(#fIn)"/>' + dot(104, 10, 2.8, 0.9) +
+         '<path d="'+BEANIE+'" fill="url(#gCoral)" filter="url(#fIn)"/>' +
+         '<path d="M78 30Q72 56 74 80M96 22Q92 50 93 80M124 22Q128 50 127 80M142 30Q148 56 146 80" stroke="#D9473A" stroke-opacity=".28" stroke-width="2.2" fill="none" stroke-linecap="round"/>' + hl(80, 46, 16, 9, -28, 0.7) +
+         '<rect x="40" y="72" width="140" height="26" rx="13" fill="url(#gCream)" filter="url(#fIn)"/>' +
+         '<path d="M56 78v14M68 78v14M80 78v14M92 78v14M104 78v14M116 78v14M128 78v14M140 78v14M152 78v14M164 78v14" stroke="#D2CAE9" stroke-width="2.6" stroke-linecap="round" fill="none"/>' + hl(66, 78, 12, 3, 0, 0.7),
+    crown: '<path d="'+CROWN+'" fill="url(#gGold)" stroke="url(#gGold)" stroke-width="6" stroke-linejoin="round" filter="url(#fIn)"/>' +
+         '<rect x="57" y="70" width="106" height="18" rx="9" fill="url(#gGoldD)" filter="url(#fInS)"/>' +
+         '<circle cx="56" cy="38" r="7" fill="url(#gPink)" filter="url(#fInS)"/><circle cx="110" cy="22" r="7.5" fill="url(#gMint)" filter="url(#fInS)"/><circle cx="164" cy="38" r="7" fill="url(#gSkyB)" filter="url(#fInS)"/>' +
+         dot(53.5, 35.5, 2, 0.95) + dot(107.5, 19.5, 2.1, 0.95) + dot(161.5, 35.5, 2, 0.95) +
+         dot(86, 79, 3.4, 0.85) + dot(110, 79, 3.4, 0.85) + dot(134, 79, 3.4, 0.85) + hl(82, 62, 10, 5, -25, 0.65) + hl(70, 74, 8, 2.4, 0, 0.6),
+    /* NEW 헤드폰: 머리 위 밴드 + 양옆 컵(안쪽 라임 쿠션) */
+    headphones: '<path d="'+PHONE_BAND+'" fill="none" stroke="#14131F" stroke-width="13" stroke-linecap="round"/>' +
+         '<path d="'+PHONE_BAND+'" fill="none" stroke="url(#gPhone)" stroke-width="9.5" stroke-linecap="round"/>' +
+         '<path d="M44 92C52 62 76 46 104 44" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="2.4" stroke-linecap="round"/>' +
+         '<rect x="31" y="106" width="11" height="40" rx="5.5" fill="url(#gLimeA)" filter="url(#fInS)"/><rect x="178" y="106" width="11" height="40" rx="5.5" fill="url(#gLimeA)" filter="url(#fInS)"/>' +
+         '<rect x="10" y="100" width="28" height="52" rx="13" fill="url(#gPhone)" filter="url(#fIn)"/><rect x="182" y="100" width="28" height="52" rx="13" fill="url(#gPhone)" filter="url(#fIn)"/>' +
+         '<circle cx="24" cy="126" r="5" fill="url(#gLimeA)"/><circle cx="196" cy="126" r="5" fill="url(#gLimeA)"/>' + hl(18, 112, 3, 7, 0, 0.5) + hl(190, 112, 3, 7, 0, 0.4),
+    /* NEW 후드: 얼굴만 뚫린 모자(마스크) + 테두리 + 끈 */
+    hood: '<g mask="url(#mHood)"><path d="'+HOOD+'" fill="url(#gHood)" filter="url(#fIn)"/></g>' +
+         '<path d="M48.4 146A62 54 0 1 1 171.6 146" fill="none" stroke="#5B5973" stroke-width="10" stroke-linecap="round"/>' +
+         '<path d="M48.4 146A62 54 0 1 1 171.6 146" fill="none" stroke="url(#gHood)" stroke-width="7" stroke-linecap="round"/>' +
+         '<path d="M126 24Q114 52 110 84" stroke="#23213A" stroke-opacity=".45" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-dasharray="4 4"/>' +
+         hl(66, 64, 15, 7, -40, 0.4) +
+         '<path d="M54 148Q50 166 53 184M166 148Q170 166 167 184" stroke="#F4F1FF" stroke-width="4.4" fill="none" stroke-linecap="round"/>' +
+         '<rect x="49.5" y="181" width="7" height="12" rx="3.5" fill="url(#gLimeA)"/><rect x="163.5" y="181" width="7" height="12" rx="3.5" fill="url(#gLimeA)"/>'
+  },
+  glasses: {
+    round: '<circle cx="83" cy="136" r="22" fill="url(#gLens)"/><circle cx="137" cy="136" r="22" fill="url(#gLens)"/>' +
+         '<g fill="none" stroke="url(#gFrame)" stroke-width="5.5" stroke-linecap="round" filter="url(#fInS)"><circle cx="83" cy="136" r="23"/><circle cx="137" cy="136" r="23"/><path d="M106 133Q110 129 114 133"/></g>' +
+         '<path d="M68 128q3-8 11-11M122 128q3-8 11-11" stroke="#fff" stroke-width="3" stroke-linecap="round" fill="none" opacity=".85"/>' + dot(97, 150, 1.8, 0.7) + dot(151, 150, 1.8, 0.7),
+    sun: '<g filter="url(#fInS)"><rect x="57" y="120" width="50" height="34" rx="15" fill="url(#gDark)"/><rect x="113" y="120" width="50" height="34" rx="15" fill="url(#gDark)"/></g>' +
+         '<g fill="none" stroke="url(#gPink)" stroke-width="5" stroke-linecap="round"><rect x="57" y="120" width="50" height="34" rx="15"/><rect x="113" y="120" width="50" height="34" rx="15"/><path d="M107 132Q110 129 113 132"/></g>' +
+         '<path d="M67 129l9 11M77 128l4 5M123 129l9 11M133 128l4 5" stroke="#fff" stroke-width="3.2" stroke-linecap="round" opacity=".55" fill="none"/>',
+    /* NEW 블랙 선글라스: 한 장짜리 랩 렌즈 + 라임 반사 */
+    shade: '<path d="'+SHADE+'" fill="url(#gDark)" filter="url(#fInS)"/>' +
+         '<path d="M50 124Q110 110 170 124" stroke="#0B0B14" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+         '<path d="M62 132L80 128M68 142L98 134M128 130L152 132" stroke="#C6F432" stroke-opacity=".6" stroke-width="3" stroke-linecap="round" fill="none"/>' +
+         dot(150, 138, 2, 0.6)
+  },
+  charm: {
+    star: '<path d="'+starPath(192, 194, 14.5, 7)+'" fill="url(#gGold)" stroke="url(#gGold)" stroke-width="3.5" stroke-linejoin="round" filter="url(#fInS)"/>' + dot(187.5, 189.5, 2.2, 0.95),
+    bolt: '<path d="M196 178L183 195L191 195L187 208L201 190L193 190Z" fill="url(#gMint)" stroke="url(#gMint)" stroke-width="3.5" stroke-linejoin="round" filter="url(#fInS)"/>' + dot(191.5, 185, 1.7, 0.95),
+    heart: '<path d="M192 206C174 195 176 180 185 180C189.5 180 192 184 192 186.5C192 184 194.5 180 199 180C208 180 210 195 192 206Z" fill="url(#gPink)" filter="url(#fInS)"/>' + dot(184.5, 185.5, 2.2, 0.95),
+    /* NEW 체인 키링: 고리 3개 + 은색 태그 */
+    chain: '<g fill="none" stroke="#7F799E" stroke-width="3.8"><ellipse cx="191.5" cy="187" rx="3" ry="4.4"/><ellipse cx="191.5" cy="194.5" rx="1.3" ry="4.4"/><ellipse cx="191.5" cy="202" rx="3" ry="4.4"/></g>' +
+         '<g fill="none" stroke="url(#gSilver)" stroke-width="2.4"><ellipse cx="191.5" cy="187" rx="3" ry="4.4"/><ellipse cx="191.5" cy="194.5" rx="1.3" ry="4.4"/><ellipse cx="191.5" cy="202" rx="3" ry="4.4"/></g>' +
+         '<rect x="183" y="205" width="17" height="22" rx="5" fill="url(#gSilver)" filter="url(#fInS)"/>' +
+         '<circle cx="191.5" cy="209.5" r="1.8" fill="#8C86AB"/><path d="M187 216h9M187 220.5h6" stroke="#8C86AB" stroke-width="1.6" stroke-linecap="round"/>' + dot(186.5, 208.5, 1.6, 0.9)
+  }
+};
+var RING = '<circle cx="182" cy="164" r="7" fill="none" stroke="#9E98BC" stroke-width="4.4"/><circle cx="182" cy="164" r="7" fill="none" stroke="url(#gSilver)" stroke-width="3.2"/>' +
+  '<path d="M178.5 158.6a6 6 0 0 1 6 -0.6" stroke="#fff" stroke-width="1.6" stroke-linecap="round" fill="none"/>' +
+  '<path d="M185 170Q191 172 191.5 183" stroke="#AFA9C9" stroke-width="3.4" stroke-linecap="round" fill="none"/>';
+/* 모자·안경이 몸에 떨어뜨리는 그림자 (몸 윤곽으로 잘라 냄) */
+var CAST = {
+  cap: '<path d="'+CAP_DOME+'"/><path d="'+CAP_BRIM+'"/>',
+  beanie: '<rect x="40" y="72" width="140" height="26" rx="13"/>',
+  crown: '<rect x="57" y="70" width="106" height="18" rx="9"/>',
+  round: '<circle cx="83" cy="136" r="23" fill="none" stroke-width="6"/><circle cx="137" cy="136" r="23" fill="none" stroke-width="6"/>',
+  sun: '<rect x="57" y="120" width="50" height="34" rx="15"/><rect x="113" y="120" width="50" height="34" rx="15"/>',
+  shade: '<path d="'+SHADE+'"/>',
+  headphones: '<rect x="10" y="100" width="28" height="52" rx="13"/><rect x="182" y="100" width="28" height="52" rx="13"/>'
+};
+function cast(k){ return CAST[k] ? '<g clip-path="url(#cpBody)"><g transform="translate(1 7)" filter="url(#fBlur)" opacity=".26" fill="#2B1F6B" stroke="#2B1F6B" stroke-width="0">'+CAST[k]+'</g></g>' : ''; }
+function hat(k){ return PART.hat[k] || ''; }
+function glasses(k){ return PART.glasses[k] || ''; }
+function charm(k){ return PART.charm[k] ? RING + PART.charm[k] : ''; }
+
+/* 반사광: 몸 가장자리를 굵게 그어 흐리게 → 몸 안쪽만 남김(오른쪽 아래만 보이게 그라데이션) */
+function RIM(k){ return '<path d="'+BODY+'" fill="none" stroke="url(#gRim-'+k+')" stroke-width="16" filter="url(#fRim)" opacity=".9"/>'; }
+/* 눈: 진한 구슬 + 아래쪽 반사(홍채 빛) + 큰 하이라이트 2개 */
+function eyeBall(cx, cy, rx, ry){
+  return '<ellipse cx="'+cx+'" cy="'+fx(cy+2)+'" rx="'+fx(rx+1.2)+'" ry="'+fx(ry+1.2)+'" fill="#2B1F6B" opacity=".2" filter="url(#fSoft)"/>' +
+    '<ellipse cx="'+cx+'" cy="'+cy+'" rx="'+rx+'" ry="'+ry+'" fill="url(#gEye)"/>' +
+    '<ellipse cx="'+cx+'" cy="'+fx(cy+ry*0.44)+'" rx="'+fx(rx*0.56)+'" ry="'+fx(ry*0.27)+'" fill="#9A8DF0" opacity=".5"/>' +
+    '<ellipse cx="'+fx(cx-rx*0.3)+'" cy="'+fx(cy-ry*0.36)+'" rx="'+fx(rx*0.42)+'" ry="'+fx(ry*0.37)+'" fill="#fff" transform="rotate(-18 '+fx(cx-rx*0.3)+' '+fx(cy-ry*0.36)+')"/>' +
+    '<circle cx="'+fx(cx+rx*0.36)+'" cy="'+fx(cy+ry*0.34)+'" r="'+fx(rx*0.19)+'" fill="#fff" opacity=".95"/>';
+}
+
+/* ════ 3. 캐릭터 「몽글이」 — 몸(색) + 모자 + 안경 + 키링을 겹쳐 그림 ════ */
+var EYE_N = 0;
+function charSVG(st, mood, noShadow, anim){
+  st = st || {};
+  var k = COL[st.color] ? st.color : 'lav', c = COL[k];
+  var m = mood === 'happy' || mood === 'wow' ? mood : 'base';
+  var F = 'fill="url(#gF-'+k+')" filter="url(#fInS)"';
+  /* 팔: 기본은 몸 앞(배 옆)에 붙이고 몸에 접촉 그림자, 기쁨·놀람은 몸 뒤에서 위로 */
+  var armsBack = '', armsFront = '';
+  if (m === 'happy') armsBack = '<ellipse cx="22" cy="108" rx="12" ry="19" transform="rotate(-40 22 108)" '+F+'/><ellipse cx="198" cy="108" rx="12" ry="19" transform="rotate(40 198 108)" '+F+'/>';
+  else if (m === 'wow') armsBack = '<ellipse cx="18" cy="128" rx="12" ry="18" transform="rotate(-62 18 128)" '+F+'/><ellipse cx="202" cy="128" rx="12" ry="18" transform="rotate(62 202 128)" '+F+'/>';
+  else {
+    var A = '<ellipse cx="37" cy="154" rx="11.5" ry="14.5" transform="rotate(18 37 154)"/><ellipse cx="183" cy="154" rx="11.5" ry="14.5" transform="rotate(-18 183 154)"/>';
+    armsFront = '<g clip-path="url(#cpBody)"><g transform="translate(3 6)" fill="'+c.sh+'" opacity=".34" filter="url(#fSoft)">'+A+'</g></g>' +
+      '<g '+F+'>'+A+'</g>' + hl(31, 145, 4, 2.4, -30, 0.7) + hl(179, 145, 4, 2.4, -30, 0.55);
+  }
+  var sprout = PART.hat[st.hat] ? '' :
+    '<path d="M110 52Q108 41 112 33" stroke="#3FBF83" stroke-width="4.5" stroke-linecap="round" fill="none"/>' +
+    '<path d="M112 34C100 33 91 26 90 15C103 15 112 23 112 34Z" fill="url(#gLeaf)" filter="url(#fInS)"/>' +
+    '<path d="M112 34C113 22 123 14 137 15C137 28 126 35 112 34Z" fill="url(#gLeaf)" filter="url(#fInS)"/>' +
+    hl(97, 21, 4, 2, 40, 0.7) + hl(127, 20, 4, 2, -40, 0.6);
+  var eyes;
+  if (m === 'happy') eyes = '<path d="M70 140Q83 121 96 140M124 140Q137 121 150 140" stroke="#2A2350" stroke-width="6.5" stroke-linecap="round" fill="none"/>';
+  else if (m === 'wow') eyes = '<g class="mg-eyes" style="animation-delay:-'+(EYE_N++%5)+'s">' + eyeBall(EYE_L[0], EYE_L[1], 13.5, 17) + eyeBall(EYE_R[0], EYE_R[1], 13.5, 17) + '</g>' +
+    '<path d="M70 108Q81 100 93 105M127 105Q139 100 150 108" stroke="#2A2350" stroke-width="4" stroke-linecap="round" fill="none" opacity=".85"/>';
+  else eyes = '<g class="mg-eyes" style="animation-delay:-'+(EYE_N++%5)+'s">' + eyeBall(EYE_L[0], EYE_L[1], 12.5, 15) + eyeBall(EYE_R[0], EYE_R[1], 12.5, 15) + '</g>';
+  var mouth;
+  if (m === 'happy') mouth = '<path d="M96 154Q110 149 124 154Q123 174 110 174Q97 174 96 154Z" fill="#3A2458"/><ellipse cx="110" cy="168" rx="7" ry="4" fill="#FF7E9D"/><path d="M101 155Q110 152.5 119 155" stroke="#fff" stroke-opacity=".35" stroke-width="1.6" fill="none" stroke-linecap="round"/>';
+  else if (m === 'wow') mouth = '<ellipse cx="110" cy="164" rx="8" ry="10" fill="#3A2458"/><ellipse cx="110" cy="169" rx="5" ry="3.5" fill="#FF7E9D"/>';
+  else mouth = '<path d="M101 157Q110 166 119 157" stroke="#2A2350" stroke-width="4.5" stroke-linecap="round" fill="none"/>';
+  var cl = function(part){ return anim === part ? ' class="in-'+part+'"' : ''; };
+  var shadow = noShadow ? '' : '<g class="mg-sh"><ellipse cx="110" cy="217" rx="88" ry="15" fill="url(#gGround)"/><ellipse cx="110" cy="215" rx="54" ry="6" fill="#2B1F6B" opacity=".3" filter="url(#fSoft)"/></g>';
+  return '<svg viewBox="0 0 220 240" xmlns="http://www.w3.org/2000/svg" style="display:block;width:100%;overflow:visible" role="img" aria-label="내 캐릭터 몽글이">' + shadow +
+    '<g class="mg-fig">' + armsBack +
+    '<g '+F+'>'+FEET+'</g><g clip-path="url(#cpFeet)"><ellipse cx="110" cy="196" rx="72" ry="9" fill="'+c.sh+'" opacity=".5" filter="url(#fSoft)"/></g>' +
+    hl(78, 202, 5, 2.4, 0, 0.6) + hl(130, 202, 5, 2.4, 0, 0.5) + sprout +
+    '<path d="'+BODY+'" fill="url(#gB-'+k+')" filter="url(#fB-'+k+')"/>' +
+    '<g clip-path="url(#cpBody)"><ellipse cx="110" cy="216" rx="90" ry="36" fill="url(#gAO-'+k+')"/>' +
+      RIM(k) + '</g>' +
+    hl(80, 86, 25, 13, -30, 0.88) + dot(67, 86, 4.6, 0.92) + dot(78, 73, 2.3, 0.8) +
+    '<ellipse cx="58" cy="160" rx="13" ry="8" fill="url(#gCheek)"/><ellipse cx="162" cy="160" rx="13" ry="8" fill="url(#gCheek)"/>' +
+    armsFront + eyes + mouth +
+    '<g'+cl('glasses')+'>' + cast(st.glasses) + glasses(st.glasses) + '</g>' +
+    '<g'+cl('hat')+'>' + cast(st.hat) + hat(st.hat) + '</g>' +
+    '<g transform="translate(5 6)"><g'+cl('charm')+'>' + charm(st.charm) + '</g></g>' +
+    '</g></svg>';
+}
+
+/* ════ 4. 아이템 아이콘 (꾸미기 격자) ════ */
+var BOX = { cap:[40,12,148,88], beanie:[34,0,152,104], crown:[44,12,132,82], round:[54,108,112,58], sun:[52,114,116,46], star:[164,152,52,62], bolt:[164,152,52,62], heart:[164,152,52,62],
+  headphones:[4,30,212,128], hood:[16,10,188,186], shade:[44,104,132,56], chain:[166,152,44,80] };
+function itemIcon(kind, k){
+  if (kind === 'color') {
+    var c = COL[k] ? k : 'lav';
+    return '<svg class="art" viewBox="20 36 180 184"><ellipse cx="110" cy="212" rx="70" ry="10" fill="url(#gGround)"/><path d="'+BODY+'" fill="url(#gB-'+c+')" filter="url(#fB-'+c+')"/>' +
+      '<g clip-path="url(#cpBody)"><ellipse cx="110" cy="216" rx="90" ry="36" fill="url(#gAO-'+c+')"/>'+RIM(c)+'</g>' + hl(80, 86, 25, 13, -30, 0.9) + dot(67, 86, 4.6, 0.9) + '</svg>';
+  }
+  var art = kind === 'charm' ? charm(k) : (PART[kind] && PART[kind][k]) || '';
+  if (!art || !BOX[k]) return '<svg class="art" viewBox="0 0 60 52"><circle cx="30" cy="26" r="15" fill="none" stroke="url(#gSilver)" stroke-width="5"/><path d="M20 36L40 16" stroke="#B5B0CC" stroke-width="5" stroke-linecap="round"/></svg>';
+  return '<svg class="art" viewBox="'+BOX[k].join(' ')+'">'+art+'</svg>';
+}
+
+/* ════ 5. 3D 아이콘 세트 — 모두 24 칸, 빛은 왼쪽 위, 아래에 같은 바닥 그림자 ════ */
+var ISH = '<ellipse cx="12" cy="22.4" rx="7" ry="1.3" fill="#2B1F6B" opacity=".16"/>';
+function ihl(x, y, rot, op){ return '<ellipse cx="'+x+'" cy="'+y+'" rx="2.9" ry="1.4" fill="#fff" opacity="'+(op || 0.6)+'" transform="rotate('+rot+' '+x+' '+y+')"/>'; }
+var IC = {
+  coin: function(){ return '<svg viewBox="0 0 24 24">'+ISH+'<circle cx="12" cy="12.6" r="9.4" fill="#D98C00"/><circle cx="12" cy="11.2" r="9.4" fill="url(#gGold)" filter="url(#fInT)"/><circle cx="12" cy="11.2" r="6.9" fill="none" stroke="#fff" stroke-opacity=".45" stroke-width="1.1"/><path d="'+starPath(12, 12, 4.8, 2.3)+'" fill="#E39A0A" stroke="#E39A0A" stroke-width="1.1" stroke-linejoin="round" opacity=".5"/><path d="'+starPath(12, 11.4, 4.8, 2.3)+'" fill="#FFF8DA" stroke="#FFF8DA" stroke-width="1.1" stroke-linejoin="round"/>'+ihl(7.6, 6.4, -32, 0.7)+'</svg>'; },
+  flame: function(){ return '<svg viewBox="0 0 24 24">'+ISH+'<path d="M12 2.2C13 6 19 8.4 19 14.4A7 7 0 0 1 5 14.4C5 11.4 7 10 8 8C9 10 10.5 10 10.5 8.5C10.5 6 11 4.2 12 2.2Z" fill="url(#gFlame)" filter="url(#fInT)"/><path d="M12 12C13 14 15 14.5 15 17A3 3 0 0 1 9 17C9 15 11 14 12 12Z" fill="#FFE98A"/>'+ihl(8.6, 11.6, -62, 0.55)+'</svg>'; },
+  gift: function(){ return '<svg viewBox="0 0 24 24">'+ISH+'<rect x="4.6" y="11" width="14.8" height="10.2" rx="3" fill="#D63F78"/><rect x="4.6" y="10.4" width="14.8" height="10.2" rx="3" fill="url(#gPink)" filter="url(#fInT)"/><rect x="3.4" y="7.4" width="17.2" height="5.4" rx="2.6" fill="url(#gPink)" filter="url(#fInT)"/><rect x="10.6" y="7.4" width="2.8" height="13.2" fill="url(#gGold)"/><ellipse cx="9.1" cy="5.7" rx="3.2" ry="2" fill="url(#gGold)" filter="url(#fInT)" transform="rotate(24 9.1 5.7)"/><ellipse cx="14.9" cy="5.7" rx="3.2" ry="2" fill="url(#gGold)" filter="url(#fInT)" transform="rotate(-24 14.9 5.7)"/><circle cx="12" cy="7" r="1.7" fill="url(#gGoldD)"/>'+ihl(6.6, 9, -10, 0.65)+'</svg>'; },
+  lock: function(){ return '<svg viewBox="0 0 24 24">'+ISH+'<path d="M8 11V8.6a4 4 0 0 1 8 0V11" fill="none" stroke="#8C86AB" stroke-width="3" stroke-linecap="round"/><path d="M8 11V8.6a4 4 0 0 1 8 0V11" fill="none" stroke="url(#gSilver)" stroke-width="1.9" stroke-linecap="round"/><rect x="5" y="11.2" width="14" height="10.2" rx="3.6" fill="#77719A"/><rect x="5" y="10.4" width="14" height="10.2" rx="3.6" fill="url(#gLock)" filter="url(#fInT)"/><circle cx="12" cy="14.6" r="1.7" fill="#4E4870"/><rect x="11.2" y="15" width="1.6" height="3" rx=".8" fill="#4E4870"/>'+ihl(8.2, 12.6, -10, 0.6)+'</svg>'; },
+  check: function(){ return '<svg viewBox="0 0 24 24"><circle cx="12" cy="13.2" r="10" fill="#17966A"/><circle cx="12" cy="11.6" r="10" fill="url(#gMint)" filter="url(#fInT)"/><path d="M7.4 11.8l3.2 3.2 6-6.4" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>'+ihl(7.8, 6.4, -32, 0.6)+'</svg>'; },
+  house: function(){ return '<svg viewBox="0 0 24 24">'+ISH+'<rect x="5.5" y="10.6" width="13" height="10.8" rx="3" fill="#C9C1E2"/><rect x="5.5" y="10" width="13" height="10.8" rx="3" fill="url(#gCream)" filter="url(#fInT)"/><path d="M4 11.2L12 4.2L20 11.2Z" fill="url(#gCoral)" stroke="url(#gCoral)" stroke-width="2.6" stroke-linejoin="round" filter="url(#fInT)"/><rect x="10.2" y="14.2" width="3.6" height="6.6" rx="1.5" fill="url(#gBlue)"/>'+ihl(8.8, 8, -40, 0.6)+'</svg>'; }
+};
+/* 탭 아이콘: 두께(진한 사본 1.2 아래) + 점토 몸 + 흰 글리프 + 왼쪽 위 하이라이트 */
+var TAB = {
+  home:    { s:function(f){ return '<path d="M4.4 11.2L12 4.6L19.6 11.2V18A2.6 2.6 0 0 1 17 20.6H7A2.6 2.6 0 0 1 4.4 18Z" fill="'+f+'" stroke="'+f+'" stroke-width="1.6" stroke-linejoin="round"/>'; },
+             g:'<rect x="10.2" y="14" width="3.6" height="6.6" rx="1.6" fill="#fff" opacity=".92"/>', h:[8.6, 9.6, -40] },
+  mission: { s:function(f){ return '<path d="M5.6 20.6V9.4A6.4 6.4 0 0 1 18.4 9.4V20.6Z" fill="'+f+'" stroke="'+f+'" stroke-width="1.4" stroke-linejoin="round"/>'; },
+             g:'<path d="M8.6 20.6V10A3.4 3.4 0 0 1 15.4 10V20.6Z" fill="#fff" opacity=".3"/><circle cx="13.9" cy="15.2" r="1.3" fill="#fff"/>', h:[8.4, 7.4, -45] },
+  note:    { s:function(f){ return '<rect x="4.2" y="3.4" width="15.6" height="17.2" rx="4" fill="'+f+'"/>'; },
+             g:'<path d="M8.4 16.4v-3M12 16.4v-7.4M15.6 16.4v-5" stroke="#fff" stroke-width="2.2" stroke-linecap="round"/>', h:[7.8, 6.2, -30] },
+  class:   { s:function(f){ return '<path d="M3.5 6.2C6.5 4.8 9.5 5 12 6.6C14.5 5 17.5 4.8 20.5 6.2V18.6C17.5 17.4 14.5 17.6 12 19.2C9.5 17.6 6.5 17.4 3.5 18.6Z" fill="'+f+'" stroke="'+f+'" stroke-width="1.6" stroke-linejoin="round"/>'; },
+             g:'<path d="M12 7.6v10.4" stroke="#fff" stroke-width="1.6" stroke-linecap="round" opacity=".9"/>', h:[7.2, 7.6, -10] },
+  ask:     { s:function(f){ return '<path d="M12 3.2c5 0 9 3.5 9 7.9s-4 7.9-9 7.9c-1 0-2-.1-2.9-.4L5 20.8l.9-3.8C4.1 15.6 3 13.5 3 11.1c0-4.4 4-7.9 9-7.9z" fill="'+f+'"/>'; },
+             g:'<path d="M9.8 9.4a2.3 2.3 0 1 1 3.3 2.1c-.7.4-1.1.8-1.1 1.6" fill="none" stroke="#fff" stroke-width="1.9" stroke-linecap="round"/><circle cx="12" cy="15.6" r="1.1" fill="#fff"/>', h:[7.6, 7, -28] }
+};
+function tabIcon(name, on){
+  var t = TAB[name] || TAB.ask;
+  return '<svg viewBox="0 0 24 24" aria-hidden="true">' + '<ellipse cx="12" cy="22.6" rx="7" ry="1.2" fill="#2B1F6B" opacity="'+(on ? '.2' : '.1')+'"/>' +
+    '<g transform="translate(0 1.2)">'+t.s(on ? '#3434C2' : '#A5A1BE')+'</g>' +
+    '<g filter="url(#fInT)">'+t.s(on ? 'url(#gT)' : 'url(#gTOff)')+'</g>' + t.g + ihl(t.h[0], t.h[1], t.h[2], on ? 0.5 : 0.7) + '</svg>';
+}
+var TABS = [['home','홈'],['mission','퇴근 미션'],['note','성적노트'],['class','수업'],['ask','질문']];
+function tabbarHTML(active){
+  return TABS.map(function(t){ var on = t[0] === active; return '<button type="button" class="'+(on ? 'on' : '')+'"'+(on ? ' aria-current="page"' : '')+'>'+tabIcon(t[0], on)+'<span>'+t[1]+'</span></button>'; }).join('');
+}
+/* QR 자리: 진짜 QR이 아니라 격자 무늬만 */
+function qrSVG(){
+  var n = 21, u = 5, s = '', seed = 7, x, y;
+  function rnd(){ seed = (seed*9301 + 49297) % 233280; return seed/233280; }
+  function inFinder(x, y){ return (x < 8 && y < 8) || (x > 12 && y < 8) || (x < 8 && y > 12); }
+  for (y = 0; y < n; y++) for (x = 0; x < n; x++) { var on = rnd() > 0.52; if (on && !inFinder(x, y)) s += '<rect x="'+fx(x*u+0.4)+'" y="'+fx(y*u+0.4)+'" width="4.2" height="4.2" rx="1.2"/>'; }
+  [[0,0],[14,0],[0,14]].forEach(function(p){
+    s += '<rect x="'+(p[0]*u+2.5)+'" y="'+(p[1]*u+2.5)+'" width="30" height="30" rx="7" fill="none" stroke="#2A2350" stroke-width="5"/><rect x="'+(p[0]*u+10)+'" y="'+(p[1]*u+10)+'" width="15" height="15" rx="4"/>';
+  });
+  return '<svg viewBox="0 0 105 105" fill="#2A2350" aria-hidden="true">'+s+'</svg>';
+}
+/* ════ 6. 꾸미기 상태 (조건은 기획 확정 전 예시) ════ */
+/* [키, 이름, 잠금 조건('' = 이미 가짐), 등급('' 기본 · rare 희귀=성적 · hip 힙=성실)] */
+var ITEMS = {
+  color:   [['lav','라벤더','',''],['peach','피치','',''],['mint','민트','',''],['butter','버터','7일 연속 출석','hip'],['sky','스카이','월말 80% 이상','rare']],
+  hat:     [['none','없음','',''],['cap','캡 모자','',''],['headphones','헤드폰','','rare'],['crown','왕관','','hip'],['beanie','비니','퀴즈 30회 참가','hip'],['hood','후드','숙제 기한 내 10번','hip']],
+  glasses: [['none','없음','',''],['round','동글 안경','',''],['sun','선글라스','7일 연속 출석','hip'],['shade','블랙 선글라스','한 과목 만점','rare']],
+  charm:   [['none','없음','',''],['star','별 키링','',''],['bolt','번개 키링','퇴근 미션 첫 도전 통과 5번','hip'],['heart','하트 키링','QnA 첫 질문',''],['chain','체인 키링','지난달보다 +10점','rare']]
+};
+var GRADE = { rare:'희귀', hip:'힙' }, gfilter = '';
+/* 캐릭터 보기 켬/끔 (시안이라 이 브라우저에만 기억) */
+var charOn = true;
+try { charOn = localStorage.getItem('sianFinalChar') !== 'off'; } catch (e) {}
+try { var qc = new URLSearchParams(location.search).get('char'); if (qc === 'off' || qc === 'on') charOn = qc === 'on'; } catch (e) {}
+var TABN = { color:'색', hat:'모자', glasses:'안경', charm:'키링' };
+var BG = { lav:'linear-gradient(165deg,#ECE6FF,#DCEAFF)', peach:'linear-gradient(165deg,#FFEFE6,#FFE4EE)', mint:'linear-gradient(165deg,#E4FBF1,#E1F0FF)', sky:'linear-gradient(165deg,#E3F3FF,#ECE7FF)', butter:'linear-gradient(165deg,#FFF9DC,#FFEBDD)' };
+var BG_D = { lav:'linear-gradient(165deg,#2C2654,#1C2846)', peach:'linear-gradient(165deg,#3E2A30,#2E2340)', mint:'linear-gradient(165deg,#1B3A35,#1C2A46)', sky:'linear-gradient(165deg,#1C3150,#29254F)', butter:'linear-gradient(165deg,#3A3420,#33283A)' };
+function isDark(){ return document.documentElement.getAttribute('data-theme') === 'dark'; }
+var me = { color:'lav', hat:'cap', glasses:'none', charm:'star' }, tab = 'hat', moodTimer = 0;
+function still(){ return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches); }
+
+function renderCh(el, anim){
+  var d = el.dataset, mine = !d.color && d.off !== '1';
+  /* 캐릭터를 끈 경우: 이니셜 동그라미. 꾸미기 미리 보기·캐릭터 시트(data-keep)는 그대로 보여 줌 */
+  var keep = el.hasAttribute('data-keep') || el.id === 'pvch' || !!el.closest('.cs');
+  if (d.off === '1' || (mine && !charOn && !keep)) {
+    el.classList.add('is-ini');
+    el.innerHTML = '<span class="ini'+(d.off === '1' && el.closest('.jx') ? ' ot' : '')+'" role="img" aria-label="'+(d.ini || '예')+' (캐릭터 끔)">'+(d.ini || '예')+'</span>';
+    return;
+  }
+  el.classList.remove('is-ini');
+  /* data-color·data-hat·data-glasses·data-charm 이 있으면 그 값(다른 학생 캐릭터), 없으면 내 꾸미기 상태 */
+  el.innerHTML = charSVG({ color: d.color || me.color, hat: d.hat || me.hat, glasses: d.glasses || me.glasses, charm: d.charm || me.charm }, d.mood, el.hasAttribute('data-noshadow'), anim);
+}
+function draw(changed){
+  document.querySelectorAll('[data-ch]').forEach(function(el){ renderCh(el, el.id === 'pvch' ? changed : ''); });
+  document.getElementById('pv').style.background = (isDark() ? BG_D : BG)[me.color] || (isDark() ? BG_D : BG).lav;
+  document.getElementById('tabs').innerHTML = Object.keys(TABN).map(function(k){
+    return '<button type="button" class="'+(k === tab ? 'on' : '')+'" data-tab="'+k+'" aria-pressed="'+(k === tab)+'">'+TABN[k]+'</button>';
+  }).join('');
+  var list = ITEMS[tab].filter(function(x){ return !gfilter || x[3] === gfilter; });
+  document.getElementById('grid').innerHTML = list.length ? list.map(function(x){
+    var lock = !!x[2], on = me[tab] === x[0], g = x[3];
+    return '<button type="button" class="it'+(on ? ' on' : '')+(lock ? ' lock' : '')+(g ? ' '+g : '')+'" data-k="'+x[0]+'" aria-pressed="'+on+'">' +
+      (g ? '<i class="gt">'+GRADE[g]+'</i>' : '') +
+      (lock ? '<i class="ic lk" title="잠김">'+IC.lock()+'</i>' : (on ? '<i class="ic ck">'+IC.check()+'</i>' : '')) +
+      itemIcon(tab, x[0]) + '<span>'+x[1]+'</span>' + (lock ? '<em>'+x[2]+'</em>' : '') + '</button>';
+  }).join('') : '<p class="empty">이 칸에는 '+(GRADE[gfilter] || '')+' 아이템이 아직 없어요</p>';
+  document.querySelectorAll('#gfil button').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.g === gfilter)); });
+  document.querySelectorAll('[data-char-toggle]').forEach(function(b){ b.setAttribute('aria-checked', String(charOn)); });
+  document.documentElement.classList.toggle('char-off', !charOn);
+  var pvh = document.querySelector('#pv .hint'); if (pvh) pvh.textContent = charOn ? '미리 보기' : '캐릭터 끔 · 여기서만 보여요';
+  var po = document.querySelector('.set-pv .pvon'), pf = document.querySelector('.set-pv .pvoff');
+  if (po) { po.classList.toggle('on', charOn); pf.classList.toggle('on', !charOn); }
+}
+/* 아이템을 입으면: 칸이 통 → 캐릭터가 말랑 → 부품이 쏙 → 반짝이 */
+function sparkle(host){
+  if (still()) return;
+  var r = host.getBoundingClientRect(), cx = r.width/2, cy = r.height*0.52, i, a, d;
+  for (i = 0; i < 8; i++) {
+    a = (i/8)*Math.PI*2 + 0.3; d = 62 + (i % 3)*14;
+    var e = document.createElement('i'); e.className = 'spk';
+    e.style.cssText = 'left:'+fx(cx + Math.cos(a)*24)+'px;top:'+fx(cy + Math.sin(a)*20)+'px;--s:'+(12 + (i % 3)*5)+'px;--dx:'+fx(Math.cos(a)*d*0.6)+'px;--dy:'+fx(Math.sin(a)*d*0.5)+'px;--d:'+(i % 4)*0.04+'s';
+    e.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 0C13 8 16 11 24 12C16 13 13 16 12 24C11 16 8 13 0 12C8 11 11 8 12 0Z" fill="'+(i % 2 ? 'url(#gGold)' : '#fff')+'"/></svg>';
+    host.appendChild(e);
+    setTimeout(function(n){ return function(){ n.remove(); }; }(e), 1100);
+  }
+}
+function wear(btn){
+  var k = btn.dataset.k, lock = btn.classList.contains('lock');
+  me[tab] = k;
+  var part = tab === 'color' ? '' : (k === 'none' ? '' : (tab === 'hat' ? 'hat' : tab));
+  var p = document.getElementById('pvch');
+  p.dataset.mood = lock ? 'wow' : 'happy';
+  draw(part);
+  var nb = document.querySelector('#grid .it[data-k="'+k+'"]'); if (nb) nb.classList.add('boing');
+  p.classList.remove('pop'); void p.offsetWidth; p.classList.add('pop');
+  if (k !== 'none') sparkle(document.getElementById('pv'));
+  clearTimeout(moodTimer);
+  moodTimer = setTimeout(function(){ delete p.dataset.mood; renderCh(p); }, 1300);
+}
+function filterRows(){
+  var q = (document.getElementById('q').value || '').trim(), cls = (document.querySelector('#fcls .on') || {}).dataset;
+  var want = cls ? cls.cls : '', n = 0;
+  document.querySelectorAll('#tb tr:not(.empty)').forEach(function(tr){
+    var name = tr.cells[0].textContent, c = tr.cells[1].textContent;
+    var show = (!q || name.indexOf(q) > -1) && (!want || c === want);
+    tr.hidden = !show; if (show) n++;
+  });
+  document.querySelector('#tb .empty').hidden = n > 0;
+  document.getElementById('cnt').textContent = n + '명';
+}
+function markOverflow(){
+  document.querySelectorAll('.row').forEach(function(r){ var s = r.previousElementSibling; if (s && s.classList.contains('sec')) s.classList.toggle('ovf', r.scrollWidth > r.clientWidth + 4); });
+}
+/* 라이트/다크: 누르면 저장, 저장한 게 없으면 기기 설정을 따라감 */
+function syncThemeBtns(){
+  var t = document.documentElement.getAttribute('data-theme'), saved = null;
+  try { saved = localStorage.getItem('sianFinalTheme'); } catch (e) {}
+  document.querySelectorAll('[data-theme-set]').forEach(function(b){ b.setAttribute('aria-pressed', String(b.dataset.themeSet === t)); });
+  document.querySelectorAll('#seg3 button').forEach(function(b){ b.setAttribute('aria-pressed', String(saved ? b.dataset.th === saved : b.dataset.th === 'auto')); });
+}
+function sysTheme(){ return (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light'; }
+function setTheme(t, save){
+  document.documentElement.setAttribute('data-theme', t);
+  if (save) { try { localStorage.setItem('sianFinalTheme', t); } catch (e) {} }
+  syncThemeBtns(); draw();
+}
+function init(){
+  document.getElementById('defs').innerHTML = defsSVG();
+  document.querySelectorAll('[data-ic]').forEach(function(e){ var f = IC[e.dataset.ic]; if (f) e.innerHTML = f(); });
+  document.querySelectorAll('[data-tabbar]').forEach(function(e){ e.innerHTML = tabbarHTML(e.dataset.tabbar); });
+  document.querySelectorAll('[data-item="crown"]').forEach(function(e){ e.insertAdjacentHTML('afterbegin', '<svg viewBox="'+BOX.crown.join(' ')+'" aria-hidden="true">'+hat('crown')+'</svg>'); });
+  document.getElementById('qr').innerHTML = qrSVG();
+  document.getElementById('q').addEventListener('input', filterRows);
+  document.addEventListener('click', function(e){
+    var t = e.target.closest('[data-tab]'); if (t) { tab = t.dataset.tab; draw(); return; }
+    var it = e.target.closest('.it'); if (it) { wear(it); return; }   // 시안이라 잠긴 것도 입어 볼 수 있게 둠
+    var sj = e.target.closest('#subj button'); if (sj) { sj.parentNode.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b === sj); }); return; }
+    var fc = e.target.closest('#fcls button'); if (fc) { fc.parentNode.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b === fc); }); filterRows(); return; }
+    var mb = e.target.closest('#moods button'); if (mb) {
+      mb.parentNode.querySelectorAll('button').forEach(function(b){ b.classList.toggle('on', b === mb); });
+      var big = document.getElementById('bigch'); if (mb.dataset.m) big.dataset.mood = mb.dataset.m; else delete big.dataset.mood; renderCh(big); return;
+    }
+    var op = e.target.closest('#opts .opt'); if (op) {
+      if (op.hasAttribute('data-right')) { var sh = document.getElementById('sheet'); sh.style.animation = 'none'; void sh.offsetWidth; sh.style.animation = ''; }
+      else { op.classList.remove('bad'); void op.offsetWidth; op.classList.add('bad'); setTimeout(function(){ op.classList.remove('bad'); }, 600); }
+      return;
+    }
+    var ts = e.target.closest('[data-theme-set]'); if (ts) { setTheme(ts.dataset.themeSet, true); return; }
+    var s3 = e.target.closest('#seg3 button'); if (s3) {
+      if (s3.dataset.th === 'auto') { try { localStorage.removeItem('sianFinalTheme'); } catch (er) {} setTheme(sysTheme(), false); }
+      else setTheme(s3.dataset.th, true);
+      return;
+    }
+    var ct = e.target.closest('[data-char-toggle]'); if (ct) { charOn = !charOn; try { localStorage.setItem('sianFinalChar', charOn ? 'on' : 'off'); } catch (er) {} draw(); return; }
+    var fl = e.target.closest('[data-flip]'); if (fl) { fl.setAttribute('aria-checked', String(fl.getAttribute('aria-checked') !== 'true')); return; }
+    var gf = e.target.closest('#gfil button'); if (gf) { gfilter = gf.dataset.g; draw(); return; }
+    var jump = e.target.closest('#goSet') ? 'setting' : e.target.closest('#goRank') ? 'rank' : '';
+    if (jump) { document.getElementById(jump).scrollIntoView({ behavior: still() ? 'auto' : 'smooth', inline: 'center', block: 'nearest' }); return; }
+    var cl = e.target.closest('#clr'); if (cl && !e.target.closest('#goCloset')) { cl.classList.remove('play'); void cl.offsetWidth; cl.classList.add('play'); }
+    if (e.target.closest('#goCloset')) {
+      document.getElementById('closet').scrollIntoView({ behavior: still() ? 'auto' : 'smooth', inline: 'center', block: 'nearest' });
+    }
+  });
+  draw(); syncThemeBtns();
+  if (window.matchMedia) {
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    var onMq = function(ev){ var saved = null; try { saved = localStorage.getItem('sianFinalTheme'); } catch (e) {} if (!saved) setTheme(ev.matches ? 'dark' : 'light', false); };
+    if (mq.addEventListener) mq.addEventListener('change', onMq); else if (mq.addListener) mq.addListener(onMq);
+  }
+  markOverflow(); window.addEventListener('resize', markOverflow);
+  /* 등장 애니메이션 안전장치: 2.5초 뒤에도 시간이 안 흘렀으면(캡처 도구 등) 끝 상태로 */
+  setTimeout(function(){
+    if (!document.getAnimations) return;
+    document.getAnimations().forEach(function(a){
+      var t = a.effect && a.effect.getTiming ? a.effect.getTiming() : null;
+      /* 등장 애니메이션은 길어야 1.6초 — 2.5초가 지나도 안 끝났으면(캡처 도구·느린 iframe 등) 끝 상태로 */
+      if (t && t.iterations !== Infinity && a.playState !== 'finished') { try { a.finish(); } catch (e) {} }
+    });
+  }, 2500);
+}
+if (typeof document !== 'undefined') init();
+</script>
+</body>
+</html>

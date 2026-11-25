@@ -1,0 +1,771 @@
+// node tests/logic.test.js — 공통 로직 점검 (서버 없이 메모리 저장소로, 개발판 docs/dev/assets 기준)
+process.env.TZ = 'Asia/Seoul';   // 서버(Apps Script)와 같은 시간대로
+const assert = require('assert');
+const fs = require('fs');
+const path = require('path');
+const Core = require('../docs/dev/assets/core.js');
+const Logic = require('../docs/dev/assets/logic.js');
+const Mock = require('../docs/dev/assets/mock.js');
+
+// 숙제 제출은 로그인 열쇠(tok)로만 → 테스트에서는 번호를 주면 로그인해서 열쇠로 바꿔 보냄
+const TOKS = new WeakMap();
+function auto(e, a, p) {
+  if ((a === 'hwPhoto' || a === 'hwFinish') && p && p.code && !p.tok) {
+    const m = TOKS.get(e) || new Map(); TOKS.set(e, m);
+    if (!m.has(p.code)) { const r = Logic.handle(e, 'login', { code: p.code, dev: 'tok-' + p.code }); m.set(p.code, r.ok ? r.data.tok : 'x'); }
+    p = Object.assign({}, p, { tok: m.get(p.code) }); delete p.code;
+  }
+  return p;
+}
+let passed = 0;
+function t(name, fn) { try { fn(); passed++; console.log('  ok  ' + name); } catch (e) { console.error('  FAIL ' + name + '\n       ' + e.message); process.exitCode = 1; } }
+
+console.log('core');
+t('번호 형식: 영문 2(I·O 제외) + 숫자 6, 끝자리 확인숫자 — 퇴실퀴즈와 같은 규칙', () => {
+  assert.ok(Core.isValidCode('KM482919'));
+  assert.strictEqual(Core.codeProblem('KM482912'), 'check', '확인숫자 틀림');
+  assert.strictEqual(Core.codeProblem('KO482919'), 'format', 'O 금지');
+  assert.strictEqual(Core.codeProblem('KM4829'), 'short');
+  assert.strictEqual(Core.normCode(' km-482 919 '), 'KM482919');
+  // 퇴실퀴즈 index.html 의 luhnOk 와 같은 계산
+  const kitaku = s => { const ds = [...s].map(c => /\d/.test(c) ? c : String(c.charCodeAt(0) - 55)).join(''); let tt = 0; [...ds].reverse().forEach((ch, i) => { let d = +ch; if (i % 2) { d *= 2; if (d > 9) d -= 9; } tt += d; }); return tt % 10 === 0; };
+  for (const c of ['KM482919', 'TR520615', 'AB123450']) assert.ok(kitaku(c), c);
+});
+t('번호 발급: 중복 없음, 형식·확인숫자 맞음', () => {
+  const used = {}; let a = 12345;
+  const rand = () => { a |= 0; a = a + 0x6D2B79F5 | 0; let x = Math.imul(a ^ a >>> 15, 1 | a); x = x + Math.imul(x ^ x >>> 7, 61 | x) ^ x; return (x ^ x >>> 14) >>> 0; };
+  for (let i = 0; i < 3000; i++) {
+    const c = Core.genCode(rand, x => !!used[x]);
+    assert.ok(Core.isValidCode(c), c); assert.ok(!used[c]); used[c] = 1;
+  }
+  assert.strictEqual(Core.LETTERS.length, 24);
+});
+t('채점: 무응답·짧은 입력', () => {
+  const g = Core.grade('1234', '12');
+  assert.strictEqual(g.score, 2); assert.deepStrictEqual(g.wrong.map(w => w.n), [3, 4]); assert.strictEqual(g.wrong[0].ans, '0');
+  assert.strictEqual(Core.cleanAnswers('1 2-3x4 05', 10), '123405', '5지 이상 문항(EJU)도 받음');
+  assert.strictEqual(Core.cleanKey('1,2 6/0'), '126', '정답에서 0은 버림');
+  assert.strictEqual(Core.grade('126', '116').score, 2);
+});
+t('명단 파싱: 시간·종류로 반 찾기, 여러 반, 모르는 반', () => {
+  const classes = [{ code: 'GN-HM', name: '개념반 화목 20:20', kind: '개념', time: '화목 20:20' }, { code: 'SJ-D', name: '실전문풀 D', kind: '실전', time: '토일 10:00' },
+    { code: 'DP-SS', name: '단풀반 토일 13:00', kind: '단풀', time: '토일 13:00' }];
+  const r = Core.parseRoster('홍길동(동작)\t종합과목 개념(경제)(화목20:20)\n김하나, 실전문풀D(토일10:00)/단풀 토일13:00\n박모름\t영어반\n이름만', classes);
+  assert.deepStrictEqual(r.rows.map(x => [x.name, x.classes.join('+')]), [['홍길동(동작)', 'GN-HM'], ['김하나', 'SJ-D+DP-SS']]);
+  assert.strictEqual(r.unknown.length, 2);
+});
+t('aca 출석 체크 캡처 글자 → 반·이름', () => {
+  const ocr = '출석 체크\n2026.11.01 (일)\n[11월]종과개념(정치)(화목20:20)\n출석 결석 지각 조퇴 보강\n0 0 0 0 0\n문자발송 전체출석 저장하기\n학생 출결사항\n' +
+    '★홍유진\n출석 결석 지각 조퇴 보강\n김나윤(검정) 출석 결석 지각 조퇴 보강\n김이원\n김지원 (양천)\n김나윤(검정)\n박지혁';
+  const r = Core.parseAcaOcr(ocr);
+  assert.strictEqual(r.cls, '종과개념(정치)(화목20:20)');
+  assert.deepStrictEqual(r.names, ['홍유진', '김나윤(검정)', '김이원', '김지원(양천)', '박지혁']);
+  assert.strictEqual(Core.matchClass(r.cls, [{ code: 'GN-HM', name: '개념반 화목 20:20', kind: '개념', time: '화목 20:20' }, { code: 'DP-SS', name: '단풀반 토일 13:00', kind: '단풀', time: '토일 13:00' }]), 'GN-HM');
+});
+t('Core.gs·Logic.gs가 개발판 파일과 같은지', () => {
+  const root = path.join(__dirname, '..');
+  for (const [a, b] of [['docs/dev/assets/core.js', 'apps-script/Core.gs'], ['docs/dev/assets/logic.js', 'apps-script/Logic.gs']]) {
+    assert.strictEqual(fs.readFileSync(path.join(root, a), 'utf8'), fs.readFileSync(path.join(root, b), 'utf8'), b + ' 가 다릅니다. tools/sync-gas.sh 를 실행하세요.');
+  }
+});
+
+const CAL26 = (() => { const j = JSON.parse(fs.readFileSync(path.join(__dirname, '../tools/class-plan/calendar_2026.json'), 'utf8')).months, o = {};
+  for (const [ym, m] of Object.entries(j)) o[ym] = { start: m.start, end: m.end, off: m.off.map(x => x[0]) }; return [j, o]; })();
+t('수업 달력 계산이 연간 계획표 횟수와 같음, 미리보기 「달력」도 계획표와 같음', () => {
+  const [j, cal] = CAL26;
+  for (const ym of Object.keys(j)) for (const [pat, n] of Object.entries(j[ym].counts)) assert.strictEqual(Core.lessons(ym, Core.classDays(pat).days, cal).length, n, ym + ' ' + pat);
+  const mt = Mock.seed(Mock.createEnv())._tables['달력'];
+  assert.strictEqual(mt.length, Object.keys(j).length);
+  for (const r of mt) { const c = cal[r['월']]; assert.ok(c, r['월']); assert.strictEqual(r['개강'], c.start); assert.strictEqual(r['종강'], c.end); assert.deepStrictEqual(r['휴강'] ? r['휴강'].split(', ') : [], c.off); }
+});
+t('숙제 마감: 숙제 k = 2k+1번째 수업 시작, 넘치면 다음 달 첫 수업', () => {
+  const cal = CAL26[1];
+  assert.strictEqual(Core.hwDue('2026-10', '토일 15:00', 1, cal), '2026-10-10 15:00');
+  assert.strictEqual(Core.hwDue('2026-10', '토일 15:00', 3, cal), '2026-10-24 15:00');
+  assert.strictEqual(Core.hwDue('2026-10', '화목 20:20', 4, cal), '2026-11-03 20:20', '10월 화목은 8번 → 9번째는 11월 첫 수업');
+  assert.strictEqual(Core.hwDue('2026-11', '토일 15:00', 1, cal), '2026-11-14 15:00', '11/8 EJU 휴강 빼고');
+  assert.strictEqual(Core.hwDue('2027-01', '토일 15:00', 1, cal), '2027-01-09 15:00', '달력에 없는 달은 1일~말일');
+  assert.strictEqual(Core.fmtDue('2026-10-24 15:00'), '10/24(토) 15:00');
+});
+t('같은 사진 지문 비교', () => {
+  const a = 'f'.repeat(64), b = 'f'.repeat(60) + '0000', c = '0'.repeat(64);
+  assert.strictEqual(Core.hashDist(a, b), 16); assert.ok(Core.sameHash(a, b)); assert.ok(!Core.sameHash(a, c)); assert.ok(!Core.sameHash(a, ''));
+});
+console.log('logic');
+const env = Mock.createEnv({ now: () => new Date('2026-11-03T21:00:00+09:00') });
+const H = (a, p) => Logic.handle(env, a, auto(env, a, p));
+env._tables['반'] = [{ '반코드': 'GN-HM', '반이름': '개념반 화목 20:20', '종류': '개념', '요일시간': '화목 20:20', '활성': 'Y' },
+  { '반코드': 'DP-SS', '반이름': '단풀반 토일 13:00', '종류': '단풀', '요일시간': '토일 13:00', '활성': 'Y' }];
+// 원생명단에 이미 있는 학생 (퇴실퀴즈에서 쓰던 번호)
+env._tables['원생'] = [{ '일련번호': 'KM482919', '이름': '가학생(동작)', '상태': '', '발급일': '2026-10-17', '메모': '' },
+  { '일련번호': 'TR520615', '이름': '나학생', '상태': '', '발급일': '2026-10-17', '메모': '' },
+  { '일련번호': 'AB123450', '이름': '막힌학생', '상태': '차단', '발급일': '2026-10-17', '메모': '' }];
+let token; const codes = { '가학생(동작)': 'KM482919', '나학생': 'TR520615' };
+t('관리자 로그인 실패 5번이면 잠김', () => {
+  for (let i = 0; i < 4; i++) assert.ok(!H('adminLogin', { password: 'x', dev: 'd1' }).ok);
+  assert.ok(/5번/.test(H('adminLogin', { password: 'x', dev: 'd1' }).error));
+  assert.ok(/잠시/.test(H('adminLogin', { password: 'demo', dev: 'd1' }).error), '잠긴 동안 맞는 비번도 거절');
+  const okr = H('adminLogin', { password: 'demo', dev: 'd2' }); assert.ok(okr.ok); token = okr.data.token;
+});
+t('관리자 비밀번호: 기기를 바꿔도 1시간에 20번 틀리면 모두 막힘', () => {
+  const e2 = Mock.createEnv({ now: () => new Date('2026-11-03T21:00:00+09:00') });
+  for (let i = 0; i < 20; i++) assert.ok(!Logic.handle(e2, 'adminLogin', { password: String(1000 + i), dev: 'bot' + i }).ok);
+  const r = Logic.handle(e2, 'adminLogin', { password: 'demo', dev: 'new-device' });
+  assert.ok(!r.ok && /1시간/.test(r.error), '맞는 비번이라도 거절');
+});
+t('토큰 없이 관리 요청 거절', () => { const r = H('bootstrap', {}); assert.ok(!r.ok && r.needLogin); });
+t('명단 붙여넣기: 원생명단의 번호를 그대로 쓰고, 없는 이름만 새 번호로 명단에 추가', () => {
+  const r = H('importRoster', { token, text: '가학생(동작)\t개념 화목20:20\n나학생\t단풀 토일13:00/개념 화목 20:20\n다학생\t개념반 화목 20:20' });
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(r.data.updated.map(x => x.code), ['KM482919', 'TR520615']);
+  assert.strictEqual(r.data.added.length, 1); codes['다학생'] = r.data.added[0].code;
+  assert.ok(Core.isValidCode(codes['다학생']));
+  assert.strictEqual(env._tables['원생'].length, 4, '원생명단에 1명 추가');
+  assert.strictEqual(env._tables['수강'].length, 3);
+});
+t('괄호(지역)를 빼고 넣으면 자동으로 잇지 않고 확인 요청', () => {
+  const r = H('importRoster', { token, text: '가학생\t개념 화목20:20' });
+  assert.strictEqual(r.data.added.length, 0); assert.strictEqual(r.data.unknown.length, 1);
+  assert.strictEqual(env._tables['원생'].length, 4);
+});
+t('빠진 학생은 반만 비움(번호·명단은 그대로)', () => {
+  const r = H('importRoster', { token, text: '가학생(동작)\t단풀 토일13:00\n나학생\t단풀 토일13:00', deactivateMissing: true });
+  assert.deepStrictEqual(r.data.deactivated.map(x => x.name), ['다학생']);
+  assert.strictEqual(env._tables['원생'].length, 4);
+  H('importRoster', { token, text: '가학생(동작)\t개념 화목20:20/단풀 토일13:00\n나학생\t단풀 토일13:00/개념 화목 20:20\n다학생\t개념 화목20:20' });
+});
+t('접속기록: 로그인할 때만 한 줄(실패·학생별 보기는 안 남음), 강사 accessLog 요약', () => {
+  const n0 = env._log.length;
+  H('login', { code: 'KM482919', dev: 'dev-abc123xyz' });
+  H('login', { code: 'KM482919', dev: 'dev-abc123xyz', auto: 1 });
+  H('login', { code: 'ZZ000001', dev: 'x' });
+  H('studentAs', { token, code: 'KM482919' });
+  assert.strictEqual(env._log.length, n0 + 2);
+  const last = env._log[env._log.length - 1];
+  assert.strictEqual(last['구분'], '자동'); assert.strictEqual(env._log[env._log.length - 2]['구분'], '로그인');
+  assert.strictEqual(last['번호'], 'KM482919'); assert.ok(last['이름']); assert.strictEqual(last['기기'], 'devabc12');
+  assert.ok(H('accessLog', {}).needLogin, '강사만');
+  const r = H('accessLog', { token, code: 'KM482919' }); assert.ok(r.ok);
+  assert.ok(r.data.sum.KM482919.total >= 2 && r.data.sum.KM482919.days30 === 1 && r.data.rows.length >= 2);
+});
+t('강사 「학생별」: studentAs 는 강사만, 학생 화면과 같은 내용', () => {
+  assert.ok(H('studentAs', { code: 'KM482919' }).needLogin, '강사 로그인 없이는 안 됨');
+  const r = H('studentAs', { token, code: 'km-482-919' }); assert.ok(r.ok); assert.strictEqual(r.data.code, 'KM482919'); assert.ok(!r.data.tok, '학생 열쇠는 안 줌');
+  assert.ok(!H('studentAs', { token, code: 'ZZ000000' }).ok);
+});
+let exam;
+t('시험 등록: 정답 개수 검사', () => {
+  assert.ok(!H('addExam', { token, cls: 'GN-HM', label: '1주차', total: 5, key: '1234' }).ok);
+  const r = H('addExam', { token, cls: 'GN-HM', label: '1주차 소테스트', total: 5, key: '12341', kind: '소테스트', month: '2026-11', date: '2026-11-03' });
+  assert.ok(r.ok, r.error); exam = r.data;
+});
+t('답안 입력 → 채점, 다시 입력하면 덮어씀', () => {
+  let r = H('saveResult', { token, exam: exam.id, code: codes['가학생(동작)'], answers: '1234' });
+  assert.strictEqual(r.data.score, 4); assert.deepStrictEqual(r.data.wrong, [5]); assert.strictEqual(r.data.answers, '12340');
+  r = H('saveResult', { token, exam: exam.id, code: codes['가학생(동작)'], answers: '12341' }); assert.strictEqual(r.data.score, 5);
+  H('saveResult', { token, exam: exam.id, code: codes['나학생'], answers: '21341' });
+  assert.strictEqual(env._tables['시험결과'].length, 2);
+});
+t('학생 로그인 → 본인 점수·반 평균·틀린 번호만', () => {
+  const r = H('login', { code: 'tr-520 615', dev: 's1' });
+  assert.ok(r.ok, r.error);
+  const tt = r.data.classes.filter(c => c.code === 'GN-HM')[0].tests[0];
+  assert.strictEqual(tt.score, 3); assert.strictEqual(tt.avg, 4); assert.deepStrictEqual(tt.wrong, [1, 2]);
+  assert.ok(!tt.wrongDetail, '정답은 기본으로 숨김');
+  assert.ok(!JSON.stringify(r.data).includes('가학생'), '다른 학생 이름 노출 없음');
+});
+t('오답 채점: 틀린 문항 순서대로 저장, 점수는 그대로, 학생 화면엔 다시 맞힌 번호만', () => {
+  const code = codes['나학생'];
+  assert.ok(!H('saveRetry', { exam: exam.id, code, answers: '12' }).ok, '강사만');
+  assert.ok(!H('saveRetry', { token, exam: exam.id, code: codes['가학생(동작)'], answers: '1' }).ok, '만점 학생은 오답 없음');
+  assert.ok(!H('saveRetry', { token, exam: exam.id, code, answers: '' }).ok, '빈 답 거절');
+  let r = H('saveRetry', { token, exam: exam.id, code, answers: '13' });
+  assert.ok(r.ok, r.error); assert.deepStrictEqual(r.data.fixed, [1]); assert.strictEqual(r.data.retry, '13000');
+  const row = env._tables['시험결과'].filter(x => x['번호'] === code)[0];
+  assert.strictEqual(row['맞은개수'], 3, '원점수는 그대로'); assert.strictEqual(row['답안'], '21341');
+  const tt = H('login', { code: 'tr-520 615', dev: 's1r' }).data.classes.filter(c => c.code === 'GN-HM')[0].tests[0];
+  assert.deepStrictEqual(tt.wrong, [1, 2]); assert.deepStrictEqual(tt.fixed, [1]); assert.strictEqual(tt.score, 3);
+  assert.ok(!JSON.stringify(tt).includes('13000'), '오답답안(정답 추측 가능)은 학생에게 안 보냄');
+  // 여러 번: 아직 틀린 문항(2번)만 다시 받음, 이미 맞힌 1번은 그대로
+  let r2 = H('saveRetry', { token, exam: exam.id, code, answers: '2' });
+  assert.ok(r2.ok, r2.error); assert.deepStrictEqual(r2.data.fixed, [1, 2]); assert.strictEqual(r2.data.retry, '12000');
+  assert.ok(!H('saveRetry', { token, exam: exam.id, code, answers: '1' }).ok, '전부 고쳤으면 더 받지 않음');
+  H('saveResult', { token, exam: exam.id, code, answers: '21341' });
+  assert.strictEqual(env._tables['시험결과'].filter(x => x['번호'] === code)[0]['오답답안'], '12000', '같은 답안 다시 저장해도 오답 채점 유지');
+  H('saveResult', { token, exam: exam.id, code, answers: '21343' });
+  assert.ok(!env._tables['시험결과'].filter(x => x['번호'] === code)[0]['오답답안'], '답안이 바뀌면 오답 채점 지움');
+  H('saveResult', { token, exam: exam.id, code, answers: '21341' });
+});
+t('차단 학생·확인숫자 틀린 번호는 못 들어옴, 5번이면 잠김', () => {
+  assert.ok(!H('login', { code: 'AB123450', dev: 's8' }).ok);
+  assert.ok(/다시 확인/.test(H('login', { code: 'KM482912', dev: 's9' }).error));
+  for (let i = 0; i < 4; i++) H('login', { code: 'KM482912', dev: 's9' });
+  assert.ok(/잠시/.test(H('login', { code: 'KM482919', dev: 's9' }).error));
+});
+t('반을 비워도 기록이 있는 반은 「지난 반」으로 계속 보임', () => {
+  assert.ok(H('setClasses', { token, code: 'TR520615', classes: ['DP-SS'] }).ok);
+  const v = H('login', { code: 'TR520615', dev: 's2' }).data;
+  const gn = v.classes.filter(c => c.code === 'GN-HM')[0];
+  assert.ok(gn && gn.current === false && gn.tests[0].score === 3);
+  assert.strictEqual(v.classes[0].code, 'DP-SS', '지금 듣는 반이 먼저');
+  H('setClasses', { token, code: 'TR520615', classes: ['GN-HM', 'DP-SS'] });
+});
+t('지난 달은 본 시험만, 이번 달은 듣는 반 시험 전부 보임', () => {
+  const old = H('addExam', { token, cls: 'GN-HM', label: '10월 월말', total: 2, key: '12', kind: '월말테스트', month: '2026-10', date: '2026-10-30' }).data;
+  const now = H('addExam', { token, cls: 'GN-HM', label: '2주차', total: 2, key: '12', kind: '소테스트', month: '2026-11', date: '2026-11-10' }).data;
+  let v = H('login', { code: 'TR520615', dev: 's3' }).data, ids = v.classes.filter(c => c.code === 'GN-HM')[0].tests.map(x => x.id);
+  assert.ok(!ids.includes(old.id), '지난 달·미응시 → 안 보임'); assert.ok(ids.includes(now.id), '이번 달 → 보임');
+  H('saveResult', { token, exam: old.id, code: 'TR520615', answers: '11' });
+  v = H('login', { code: 'TR520615', dev: 's3' }).data; ids = v.classes.filter(c => c.code === 'GN-HM')[0].tests.map(x => x.id);
+  assert.ok(ids.includes(old.id), '지난 달이라도 본 시험은 보임');
+  H('deleteResult', { token, exam: old.id, code: 'TR520615' }); H('deleteExam', { token, exam: old.id }); H('deleteExam', { token, exam: now.id });
+});
+let hw;
+t('숙제 등록·사진 제출·마무리·확인', () => {
+  hw = H('addHomework', { token, cls: 'GN-HM', label: '1주차 숙제', book: '문제집', p0: 20, p1: 29, total: 51, month: '2026-11' }).data;
+  const c = codes['가학생(동작)'];
+  assert.ok(!H('hwFinish', { code: c, hw: hw.id, count: 40 }).ok, '사진 없이 마무리 불가');
+  assert.ok(H('hwPhoto', { code: c, hw: hw.id, order: 1, mime: 'image/jpeg', b64: '/9j/AAAA' }).ok);
+  const p2 = H('hwPhoto', { code: c, hw: hw.id, order: 2, mime: 'image/jpeg', b64: '/9j/AAAA' }); assert.ok(p2.ok); assert.strictEqual(p2.data.check, null, '사진 확인 기능 없음');
+  const fin = H('hwFinish', { code: c, hw: hw.id, count: 40 }); assert.ok(fin.ok, fin.error);
+  const mine = fin.data.classes.filter(x => x.code === 'GN-HM')[0].hw[0]; assert.ok(mine.done); assert.strictEqual(mine.photos, 2);
+  assert.ok(H('setChecked', { token, hw: hw.id, code: c, checked: true }).ok);
+  assert.strictEqual(H('hwPhotos', { token, hw: hw.id, code: c }).data.length, 2);
+  // 다시 내며 화면이 순서를 1부터 다시 보내도 서버가 3번째로 저장 (예전엔 1·1·2·2…로 겹침)
+  assert.ok(H('hwPhoto', { code: c, hw: hw.id, order: 1, mime: 'image/jpeg', b64: '/9j/AAAB' }).ok);
+  const ph = H('hwPhotos', { token, hw: hw.id, code: c }).data;
+  assert.deepStrictEqual(ph.map(x => x.order), [1, 2, 3]);
+  // 사진을 서버가 대신 읽어 보내기: 강사만, 「숙제사진」에 있는 파일만
+  assert.ok(H('photo', { token, id: ph[0].fileId }).ok);
+  assert.ok(!H('photo', { id: ph[0].fileId }).ok, '학생은 못 부름');
+  assert.ok(!H('photo', { token, id: 'other-drive-file' }).ok, '숙제 사진이 아닌 파일은 못 읽음');
+  assert.strictEqual(H('bootstrap', { token }).data.photoWarns.filter(x => x.hw === hw.id).length, 0);
+  assert.ok(!H('hwPhoto', { code: codes['다학생'], hw: 'NOPE', b64: '/9j/A' }).ok);
+});
+t('정답 수정 → 다시 채점', () => {
+  const r = H('updateExamKey', { token, exam: exam.id, key: '21341' }); assert.ok(r.ok, r.error);
+  assert.strictEqual(r.data.results.filter(x => x.code === codes['나학생'])[0].score, 5);
+});
+t('숙제는 쪽 범위 없이도 등록 (교재·문항 수만)', () => {
+  const r = H('addHomework', { token, cls: 'GN-HM', label: '단어 숙제', total: 30, month: '2026-11' });
+  assert.ok(r.ok, r.error); assert.strictEqual(r.data.p0, 0);
+  assert.ok(!H('addHomework', { token, cls: 'GN-HM', label: 'x', p0: 30, p1: 20 }).ok, '거꾸로 된 범위는 막음');
+  H('deleteHomework', { token, hw: r.data.id });
+});
+t('결과 있는 시험·제출 있는 숙제는 삭제 불가', () => {
+  assert.ok(!H('deleteExam', { token, exam: exam.id }).ok);
+  assert.ok(!H('deleteHomework', { token, hw: hw.id }).ok);
+});
+t('평가 저장(덮어쓰기)·대리 입력', () => {
+  H('saveEval', { token, month: '2026-11', code: codes['나학생'], text: '성실함' });
+  H('saveEval', { token, month: '2026-11', code: codes['나학생'], text: '매우 성실함' });
+  assert.strictEqual(env._tables['평가'].length, 1);
+  assert.ok(H('proxyHw', { token, hw: hw.id, code: codes['다학생'], count: 30 }).ok);
+});
+t('시험지: 강사 bootstrap 에만 오고, 탭이 없어도 동작', () => {
+  env._tables['시험지'] = [{ '시험지ID': 'GN-경제-T1', '반종류': '개념', '과목': '경제', '종류': '소테스트', '회차': '1', '이름': '경제 1주차', '문항수': '3', '정답': "'123", '출처': 'x' }];
+  const b = H('bootstrap', { token });
+  assert.ok(b.ok, b.error); assert.strictEqual(b.data.papers.length, 1); assert.strictEqual(b.data.papers[0].key, '123');
+  const s = H('login', { code: codes['나학생'], dev: 'p' });
+  assert.ok(!/123"|papers/.test(JSON.stringify(s)), '학생 응답에 시험지 없음');
+  const e3 = Mock.createEnv(); delete e3._tables['시험지'];
+  const orig = e3.store.all; e3.store.all = (t) => { if (t === '시험지') throw new Error('시트 「시험지」가 없어요'); return orig(t); };
+  const tk = Logic.handle(e3, 'adminLogin', { password: 'demo', dev: 'q' }).data.token;
+  const r = Logic.handle(e3, 'bootstrap', { token: tk }); assert.ok(r.ok, r.error); assert.deepStrictEqual(r.data.papers, []);
+  env._tables['시험지'] = [];
+});
+t('예시 데이터로 학생 화면 만들기', () => {
+  const r = Logic.handle(Mock.seed(Mock.createEnv()), 'login', { code: 'KM482919', dev: 'z' });
+  assert.ok(r.ok, r.error); assert.strictEqual(r.data.classes.length, 2);
+});
+t('숙제 마감·늦음: 처음 낸 시각 기준, 대신 입력은 늦음 아님, 마감 직접 정하기', () => {
+  let now = new Date('2026-10-26T10:00:00+09:00');
+  const e = Mock.seed(Mock.createEnv({ now: () => now })), X = (a, p) => Logic.handle(e, a, auto(e, a, p));
+  const tk = X('adminLogin', { password: 'demo', dev: 'l' }).data.token;
+  e._tables['숙제'].forEach(r => { r['월'] = '2026-10'; });
+  const b = X('bootstrap', { token: tk }).data, h1 = b.homework.filter(h => /3주차/.test(h.label) && h.cls === 'GN-HM')[0];
+  assert.strictEqual(b.homework.filter(h => /1주차/.test(h.label) && h.cls === 'GN-HM')[0].due, '2026-10-13 20:20', '화목 1주차 = 3번째 수업 10/13');
+  assert.strictEqual(h1.due, '2026-10-27 20:20');
+  const code = 'TR520615';
+  assert.ok(X('hwPhoto', { code, hw: h1.id, order: 1, b64: '/9j/AAAA' }).ok);
+  let v = X('hwFinish', { code, hw: h1.id, count: 5 }); assert.ok(v.ok, v.error);
+  let w = v.data.classes.filter(c => c.code === 'GN-HM')[0].hw.filter(x => x.id === h1.id)[0];
+  assert.strictEqual(w.late, false); assert.strictEqual(w.due, '2026-10-27 20:20');
+  now = new Date('2026-10-28T09:00:00+09:00');   // 마감 뒤에 사진 더 올려도 처음 낸 시각 그대로 → 늦음 아님
+  assert.ok(X('hwPhoto', { code, hw: h1.id, order: 2, b64: '/9j/AAAB' }).ok);
+  v = X('hwFinish', { code, hw: h1.id, count: '' }); w = v.data.classes.filter(c => c.code === 'GN-HM')[0].hw.filter(x => x.id === h1.id)[0];
+  assert.strictEqual(w.late, false); assert.strictEqual(w.count, 5, '맞은 개수 비우면 그대로');
+  const c2 = 'FH109318';
+  let w2 = X('login', { code: c2, dev: 'l2' }).data.classes.filter(c => c.code === 'GN-HM')[0].hw.filter(x => x.id === h1.id)[0];
+  assert.ok(w2.overdue && !w2.done, '마감 지났는데 안 냄');
+  assert.ok(X('hwPhoto', { code: c2, hw: h1.id, order: 1, b64: '/9j/AAAC' }).ok);
+  w2 = X('hwFinish', { code: c2, hw: h1.id, count: 3 }).data.classes.filter(c => c.code === 'GN-HM')[0].hw.filter(x => x.id === h1.id)[0];
+  assert.ok(w2.late && w2.done, '늦게 냄');
+  assert.ok(X('bootstrap', { token: tk }).data.hwSubs.filter(s => s.hw === h1.id && s.code === c2)[0].late);
+  assert.ok(X('proxyHw', { token: tk, hw: h1.id, code: 'BD774119', count: 2 }).data.late === false);
+  // 마감 직접 정하기 → 늦음 다시 계산, 빈 값이면 자동으로
+  const r = X('setHwDue', { token: tk, hw: h1.id, due: '2026.10.29 23:59' }); assert.ok(r.ok, r.error); assert.strictEqual(r.data.due, '2026-10-29 23:59');
+  assert.ok(!X('bootstrap', { token: tk }).data.hwSubs.filter(s => s.hw === h1.id && s.code === c2)[0].late);
+  assert.ok(!X('setHwDue', { token: tk, hw: h1.id, due: '언젠가' }).ok);
+  assert.strictEqual(X('setHwDue', { token: tk, hw: h1.id, due: '' }).data.due, '2026-10-27 20:20');
+});
+t('같은 사진: 같은 숙제는 다시 저장 안 함, 내 다른 숙제는 거절, 다른 학생 것은 받고 ⚠', () => {
+  const e = Mock.seed(Mock.createEnv()), X = (a, p) => Logic.handle(e, a, auto(e, a, p));
+  const tk = X('adminLogin', { password: 'demo', dev: 'd' }).data.token;
+  const hws = X('bootstrap', { token: tk }).data.homework.filter(h => h.cls === 'GN-HM');
+  const A = 'a'.repeat(64), A2 = 'a'.repeat(62) + 'bb', B = '5'.repeat(64);
+  assert.ok(X('hwPhoto', { code: 'TR520615', hw: hws[0].id, order: 1, b64: '/9j/AAAA', hash: A }).ok);
+  const n0 = e._tables['숙제사진'].length;
+  const again = X('hwPhoto', { code: 'TR520615', hw: hws[0].id, order: 2, b64: '/9j/AAAA', hash: A2 });
+  assert.ok(again.ok && again.data.dup === 'same'); assert.strictEqual(e._tables['숙제사진'].length, n0, '다시 저장 안 함');
+  const other = X('hwPhoto', { code: 'TR520615', hw: hws[1].id, order: 1, b64: '/9j/AAAA', hash: A });
+  assert.ok(!other.ok && /새로 찍어/.test(other.error), other.error);
+  const copy = X('hwPhoto', { code: 'FH109318', hw: hws[0].id, order: 1, b64: '/9j/AAAA', hash: A2 });
+  assert.ok(copy.ok && !copy.data.dup, '받음');
+  const warn = X('bootstrap', { token: tk }).data.photoWarns.filter(x => x.code === 'FH109318');
+  assert.strictEqual(warn.length, 1); assert.ok(/이샘플\(TR520615\)/.test(warn[0].msg), warn[0].msg);
+  assert.ok(X('hwPhoto', { code: 'FH109318', hw: hws[0].id, order: 2, b64: '/9j/AAAA', hash: B }).ok, '다른 사진은 그냥');
+  assert.strictEqual(X('bootstrap', { token: tk }).data.photoWarns.filter(x => x.code === 'FH109318').length, 1);
+});
+t('숙제 제출은 로그인 열쇠로만 (번호만으로는 안 됨), 열쇠가 없으면 다시 로그인 요청', () => {
+  const e = Mock.seed(Mock.createEnv()), R = (a, p) => Logic.handle(e, a, p);
+  const byCode = R('hwPhoto', { code: 'TR520615', hw: 'H3', order: 1, b64: '/9j/AAAA' });
+  assert.ok(!byCode.ok && byCode.needLogin, '번호만 → 거절');
+  assert.ok(R('hwPhoto', { tok: 'guess', hw: 'H3', b64: '/9j/AAAA' }).needLogin, '아무 열쇠 → 거절');
+  const tok = R('login', { code: 'TR520615', dev: 'k' }).data.tok; assert.ok(tok);
+  assert.ok(R('hwPhoto', { tok, hw: 'H3', order: 1, b64: '/9j/AAAA' }).ok);
+  assert.ok(!/TR520615/.test(JSON.stringify(R('hwPhoto', { tok: 'nope', hw: 'H3', b64: '/9j/A' }))), '틀린 열쇠 응답에 학생 정보 없음');
+});
+t('사진: 3MB 넘거나 사진이 아니면 거절, 숙제 하나에 24장까지', () => {
+  const e = Mock.seed(Mock.createEnv()), R = (a, p) => Logic.handle(e, a, p);
+  const tok = R('login', { code: 'TR520615', dev: 'k' }).data.tok;
+  assert.ok(/3MB/.test(R('hwPhoto', { tok, hw: 'H3', b64: '/9j/' + 'A'.repeat(4.2 * 1024 * 1024) }).error));
+  assert.ok(/사진 파일만/.test(R('hwPhoto', { tok, hw: 'H3', b64: 'iVBORw0K' }).error));
+  for (let i = 0; i < 24; i++) assert.ok(R('hwPhoto', { tok, hw: 'H3', order: i + 1, b64: '/9j/AAAA' }).ok);
+  assert.ok(/24장까지/.test(R('hwPhoto', { tok, hw: 'H3', order: 25, b64: '/9j/AAAA' }).error));
+});
+t('3개월 지난 사진 지우기: 휴지통으로, 시트에는 지운 표시', () => {
+  let now = new Date('2026-10-21T10:00:00+09:00');
+  const e = Mock.seed(Mock.createEnv({ now: () => now })), R = (a, p) => Logic.handle(e, a, p);
+  const trashed = [];
+  let r = Logic.cleanupPhotos(e, id => trashed.push(id)); assert.strictEqual(r.removed, 0);
+  now = new Date('2027-01-20T10:00:00+09:00');
+  r = Logic.cleanupPhotos(e, id => trashed.push(id)); assert.strictEqual(r.removed, 6); assert.strictEqual(trashed.length, 6);
+  const tk = R('adminLogin', { password: 'demo', dev: 'c' }).data.token;
+  const ph = R('hwPhotos', { token: tk, hw: 'H2', code: 'KM482919' }).data;
+  assert.ok(ph[0].gone && /3개월 지나 지움/.test(ph[0].note));
+  assert.strictEqual(Logic.cleanupPhotos(e, id => trashed.push(id)).removed, 0, '두 번 지우지 않음');
+});
+t('강사 경고: 달력에 없는 달, 요일 모르는 반, 시트에 없는 칸 / 로그인과 첫 불러오기 한 번에', () => {
+  let now = new Date('2026-12-10T10:00:00+09:00');
+  const e = Mock.seed(Mock.createEnv({ now: () => now })), R = (a, p) => Logic.handle(e, a, p);
+  const lg = R('adminLogin', { password: 'demo', dev: 'w' }); assert.ok(lg.data.boot && lg.data.boot.classes.length, '로그인 응답에 기록이 같이 옴');
+  let w = lg.data.boot.warnings.join('\n');
+  assert.ok(/2027년 1월/.test(w) && !/2026년 12월/.test(w), w);
+  e._tables['반'][0]['요일시간'] = '시간 미정';
+  e.store.head = t => t === '숙제' ? ['숙제ID', '반코드'] : Logic.TABLES[t];
+  w = R('bootstrap', { token: lg.data.token }).data.warnings.join('\n');
+  assert.ok(/요일을 못 읽었어요/.test(w) && /「숙제」 탭 첫 줄에 「월」/.test(w), w);
+});
+t('모든 응답에 서버 버전(ver)이 붙고, sync-gas.sh 가 넣은 값과 같음', () => {
+  assert.strictEqual(Logic.handle(Mock.createEnv(), 'ping', {}).ver, Logic.VERSION);
+  const strip = f => fs.readFileSync(path.join(__dirname, '..', f), 'utf8').replace(/var VERSION = '[^']*';/, "var VERSION = '';");
+  const h = require('crypto').createHash('sha1').update(strip('docs/dev/assets/core.js') + strip('docs/dev/assets/logic.js') + strip('apps-script/Code.gs')).digest('hex').slice(0, 10);
+  assert.strictEqual(Logic.VERSION, h, 'tools/sync-gas.sh 를 실행하세요');
+});
+t('관리자 비밀번호를 바꾸면(ADMIN_GEN) 예전 로그인은 무효', () => {
+  const e = Mock.seed(Mock.createEnv()), base = e.props.get; let gen = '';
+  e.props = { get: k => k === 'ADMIN_GEN' ? gen : base(k) };
+  const tk = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 'g' }).data.token;
+  assert.ok(Logic.handle(e, 'bootstrap', { token: tk }).ok);
+  gen = '1761040000000';
+  const r = Logic.handle(e, 'bootstrap', { token: tk }); assert.ok(!r.ok && r.needLogin);
+  const tk2 = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 'g' }).data.token;
+  assert.ok(Logic.handle(e, 'bootstrap', { token: tk2 }).ok);
+});
+
+console.log('plan (강의계획서)');
+const Plan = require('../docs/dev/assets/plan.js');
+function planBoot() { const e = Mock.seed(Mock.createEnv()); const tk = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 'p' }).data.token; return Logic.handle(e, 'bootstrap', { token: tk }).data; }
+t('bootstrap 에 지난 계획서(계획서·계획서머리)와 달력이 실려 감', () => {
+  const b = planBoot();
+  assert.ok(b.plans.rows.length > 0 && b.plans.heads.length > 0 && b.cal['2026-11'].start === '2026-11-01');
+});
+t('같은 달을 다시 만들면 그 달 계획서 그대로 (날짜·내용·범위)', () => {
+  const b = planBoot();
+  const p = Plan.build({ ym: '2026-10', kind: '단풀', subj: '정치', time: '토일 13:00', cal: b.cal, bank: b.plans });
+  const src = b.plans.rows.filter(r => r['월'] === '2026-10' && r['반종류'] === '단풀');
+  assert.strictEqual(p.rows.length, src.length);
+  p.rows.forEach((r, i) => { assert.strictEqual(r.date, src[i]['날짜']); assert.strictEqual(r.content, src[i]['내용']); assert.strictEqual(r.range, src[i]['범위']); });
+  assert.strictEqual(p.sheet, '2610정치단풀'); assert.strictEqual(p.title, '2026년10월강의계획'); assert.deepStrictEqual(p.warn, []);
+});
+t('다음 달: 수업 수가 같은 지난 계획서에서 이어 쓰고, 개념반은 짝수 회차에 주간 숙제, 끝은 월말테스트', () => {
+  const b = planBoot();
+  const p = Plan.build({ ym: '2026-11', kind: '개념', subj: '경제', time: '화목 20:20', cal: b.cal, bank: b.plans });
+  assert.strictEqual(p.rows.length, 8); assert.strictEqual(p.from, '2026-07');
+  assert.deepStrictEqual(p.rows.map(r => r.date), ['11월3일', '11월5일', '11월12일', '11월17일', '11월19일', '11월24일', '11월26일', '12월1일'], '11/10 휴강 빼고');
+  assert.strictEqual(p.rows[7].content, '월말테스트');
+  assert.deepStrictEqual(p.rows.map(r => r.hw), ['', '주간 숙제', '', '주간 숙제', '', '주간 숙제', '', ''], '월말테스트 날은 숙제 없음');
+  assert.strictEqual(p.subtitle, '< 종과개념 개념- 경제 >');
+});
+t('실전: 모의고사 줄, 지난달 계획서가 이번 달 수업(11/1)까지 잡았으면 그 다음부터', () => {
+  const b = planBoot();
+  const p = Plan.build({ ym: '2026-11', kind: '실전', ban: 'D', time: '토일 10:00', cal: b.cal, bank: b.plans });
+  assert.strictEqual(p.rows[0].date, '11월7일'); assert.ok(p.rows.every(r => r.content === '모의고사 1회 실시 및 해설' && !r.range));
+  assert.ok(/11월1일/.test(p.warn.join()), p.warn.join()); assert.strictEqual(p.sheet, '2611실전문제풀이D');
+});
+t('수업 수가 다르면 줄을 맞춤 (적으면 쪽수 적은 이웃을 합치고, 많으면 두 강이 든 줄을 나눔)', () => {
+  const items = [{ content: '1강 A', range: 'p.5-9' }, { content: '2강 B', range: 'p.10-12' }, { content: '3강 C\n4강 D', range: 'p.13-20\np.21-30' }];
+  const less = Plan.fit(items, 2, []); assert.strictEqual(less.length, 2); assert.strictEqual(less[0].content, '1강 A\n2강 B'); assert.strictEqual(less[0].range, 'p.5-12');
+  const more = Plan.fit(items, 4, []); assert.strictEqual(more.length, 4); assert.strictEqual(more[2].content, '3강 C'); assert.strictEqual(more[3].range, 'p.21-30');
+  const w = []; assert.strictEqual(Plan.fit(items, 6, w).length, 6); assert.ok(w.length);
+});
+t('과목 머리말이 없으면 다른 과목 것을 빌려 오고 과목 이름만 바꿈 + 확인 표시', () => {
+  const b = planBoot();
+  const p = Plan.build({ ym: '2026-11', kind: '단풀', subj: '지리', time: '토일 13:00', cal: b.cal, bank: b.plans });
+  assert.ok(/지리/.test(p.head['부제']) && !/정치/.test(p.head['부제']), p.head['부제']);
+  assert.ok(p.warn.some(x => /빌려/.test(x)) && p.warn.some(x => /지난 계획서가 없어서/.test(x)));
+});
+
+console.log('득점등화 (실전반 환산점수)');
+function rasch(seed) {   // 가짜 응답: 학생 20명 × 쉬운 회차 A(20문)·어려운 회차 B(20문)
+  let x = seed; const rnd = () => (x = (x * 48271) % 2147483647) / 2147483647;
+  const th = Array.from({ length: 20 }, (_, i) => -1.5 + i * 0.16), bA = Array.from({ length: 20 }, (_, j) => -1 + j * 0.05), bB = bA.map(b => b + 0.8);
+  const rows = [];
+  th.forEach((t, i) => { [['A', bA], ['B', bB]].forEach(([e, bs]) => rows.push({ p: 'S' + i, exam: e, x: bs.map(b => rnd() < 1 / (1 + Math.exp(b - t)) ? 1 : 0) })); });
+  return rows;
+}
+t('같은 정답 수면 어려운 회차가 환산점수가 더 높고, 정답 수가 늘면 환산점수도 늘어남 (0~200)', () => {
+  const q = Core.equate(rasch(7));
+  for (let r = 0; r <= 20; r++) { const a = q.score('A', r), b = q.score('B', r); assert.ok(b >= a, r + ': ' + a + ' ' + b); assert.ok(a >= 0 && b <= 200); if (r) assert.ok(a >= q.score('A', r - 1)); }
+  assert.ok(q.score('B', 10) - q.score('A', 10) >= 5, '난이도 차이가 반영됨');
+  assert.strictEqual(Core.equate([{ p: 'a', exam: 'A', x: [1, 0] }]), null, '학생 한 명이면 계산 안 함');
+});
+t('logic: 환산점수 칸이 빈 실전 시험은 득점등화 값, 칸에 값이 있으면 그 값', () => {
+  const e = Mock.seed(Mock.createEnv()), T = e._tables, key = '1234123412341234';
+  T['시험'].push({ '시험ID': 'MX', '반코드': 'SJ-D', '월': '2026-10', '종류': '모의고사', '이름': 'EJU 2019-2', '문항수': '16', '정답': key, '시험일': '2026-10-03', '등록일': '' });
+  const studs = ['BD774119', 'CZ297510', 'JS603412'];
+  [['1234123412341234', ''], ['1234123412340000', ''], ['1234000000000000', '150']].forEach(([a, cv], i) => {
+    const g = Core.grade(key, a);
+    T['시험결과'].push({ '시험ID': 'MX', '번호': studs[i], '답안': a, '맞은개수': String(g.score), '틀린번호': g.wrong.map(w => w.n).join(','), '환산점수': cv, '입력일': '' });
+  });
+  const v = c => Logic.handle(e, 'login', { code: c }).data.classes.find(c => c.code === 'SJ-D').tests.find(t => t.id === 'MX');
+  const a = v('BD774119'), b = v('CZ297510'), c = v('JS603412');
+  assert.ok(a.conv > b.conv && b.conv > 0, a.conv + ' ' + b.conv);
+  assert.strictEqual(c.conv, 150, '칸에 있던 값 그대로');
+  // 칸에 단순 비례 값(정답 수/문항 수×200, 6월에 옮겨 온 값)이 있으면 득점등화로 다시 계산
+  T['시험결과'].find(r => r['번호'] === 'BD774119')['환산점수'] = '200';
+  assert.strictEqual(v('BD774119').conv, a.conv);
+});
+console.log('실전반 과목별 정답률·취약 과목');
+t('문항과목으로 과목별 내 정답률·반 평균, 달별·종합, 취약 = 반 평균보다 가장 낮은 과목', () => {
+  const e = Mock.seed(Mock.createEnv()), T = e._tables, key = '1234123412341234';
+  T['시험지'].push({ '시험지ID': 'X', '반종류': '실전', '과목': '종합과목', '종류': '모의고사', '회차': '2', '이름': 'EJU 2018-2', '문항수': '16', '정답': key, '출처': '', '문항과목': '경경경경정정정정지지지지역역역역' });
+  T['시험'].push({ '시험ID': 'MY', '반코드': 'SJ-D', '월': '2026-08', '종류': '모의고사', '이름': 'EJU 2018(2)', '문항수': '16', '정답': key, '시험일': '2026-08-03', '등록일': '' });
+  // 옮겨 온 성적(답안 없음, 틀린 번호만)도 씀
+  T['시험결과'].push({ '시험ID': 'MY', '번호': 'BD774119', '답안': '', '맞은개수': '12', '틀린번호': '5,6,7,8', '환산점수': '', '입력일': '' });
+  T['시험결과'].push({ '시험ID': 'MY', '번호': 'CZ297510', '답안': '', '맞은개수': '16', '틀린번호': '', '환산점수': '', '입력일': '' });
+  const v = Logic.handle(e, 'login', { code: 'BD774119' }).data.subj;
+  const aug = v.months.find(m => m.m === '2026-08');
+  assert.ok(aug, '8월 묶음');
+  const pol = aug.subs.find(o => o.s === '정치');
+  assert.deepStrictEqual([pol.c, pol.t, pol.me, pol.avg], [0, 4, 0, 50]);
+  assert.strictEqual(aug.subs.find(o => o.s === '경제').me, 100);
+  assert.strictEqual(aug.weak, '정치');
+  assert.strictEqual(aug.n, 1);
+  assert.ok(v.all.n >= 3 && v.all.subs.length === 5, '종합에 10월·9월 모의고사도 (예시 문항과목)');
+  assert.strictEqual(Logic.handle(e, 'login', { code: 'KM482919' }).data.subj, null, '실전반 기록이 없으면 null');
+});
+t('문항 과목 고르기(setExamSubjs): 같은 이름 시험지 줄을 고치고, 없으면 새로 만들고, 형식이 틀리면 거절', () => {
+  const e = Mock.seed(Mock.createEnv()), T = e._tables, key = '1234123412341234';
+  const tk = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 's' }).data.token, R = (a, p) => Logic.handle(e, a, Object.assign({ token: tk }, p));
+  T['시험'].push({ '시험ID': 'MZ', '반코드': 'SJ-D', '월': '2026-11', '종류': '모의고사', '이름': 'EJU 2017(1)', '문항수': '16', '정답': key, '시험일': '2026-11-03', '등록일': '' });
+  const sj = '경경경경정정정정지지지지역역현현';
+  // 시험지 줄이 없으면 새로 만듦 (반종류는 시험의 반에서, 정답은 시험에서)
+  let r = R('setExamSubjs', { exam: 'MZ', subjs: sj }); assert.ok(r.ok, r.error);
+  let rows = T['시험지'].filter(x => x['이름'] === 'EJU 2017(1)');
+  assert.strictEqual(rows.length, 1); assert.deepStrictEqual([rows[0]['반종류'], rows[0]['문항과목'], rows[0]['정답'], rows[0]['출처']], ['실전', sj, key, '강사 화면']);
+  assert.ok(r.data.papers.some(p => p.label === 'EJU 2017(1)' && p.subjs === sj), '응답(bootstrap)에 바로 반영');
+  // 이름 표기가 달라도(EJU 2017-1) 같은 시험지 줄을 고침, 새 줄을 또 만들지 않음
+  T['시험'].push(Object.assign({}, T['시험'].find(x => x['시험ID'] === 'MZ'), { '시험ID': 'MZ2', '이름': 'EJU 2017-1', '월': '2026-12' }));
+  r = R('setExamSubjs', { exam: 'MZ2', subjs: '정'.repeat(16) }); assert.ok(r.ok, r.error);
+  rows = T['시험지'].filter(x => x['이름'] === 'EJU 2017(1)');
+  assert.strictEqual(rows.length, 1); assert.strictEqual(rows[0]['문항과목'], '정'.repeat(16));
+  // 과목별 정답률이 고친 분류를 씀
+  T['시험결과'].push({ '시험ID': 'MZ', '번호': 'BD774119', '답안': key, '맞은개수': '16', '틀린번호': '', '환산점수': '', '입력일': '' });
+  const nov = Logic.handle(e, 'login', { code: 'BD774119' }).data.subj.months.find(m => m.m === '2026-11');
+  assert.deepStrictEqual(nov.subs.map(o => o.s), ['정치']);
+  // 거절: 글자 수·글자 종류, 관리자 아님
+  assert.ok(!R('setExamSubjs', { exam: 'MZ', subjs: '정정' }).ok);
+  assert.ok(!R('setExamSubjs', { exam: 'MZ', subjs: '사'.repeat(16) }).ok);
+  assert.ok(!Logic.handle(e, 'setExamSubjs', { exam: 'MZ', subjs: sj }).ok);
+  // 빈 값이면 지움
+  assert.ok(R('setExamSubjs', { exam: 'MZ', subjs: '' }).ok); assert.strictEqual(rows[0]['문항과목'], '');
+  assert.ok(Logic.WRITES.includes('setExamSubjs'));
+});
+console.log('학생 화면 등수');
+t('시험마다 내 등수(같은 점수는 같은 등수)·인원, 다른 학생 점수는 안 보냄', () => {
+  const e = Mock.seed(Mock.createEnv());
+  const tt = c => Logic.handle(e, 'login', { code: c }).data.classes.find(x => x.code === 'SJ-D').tests.find(x => x.id === 'E5');
+  assert.deepStrictEqual([tt('BD774119').rank, tt('CZ297510').rank, tt('JS603412').rank, tt('JS603412').n], [1, 2, 3, 3]);
+  e._tables['시험결과'].find(r => r['시험ID'] === 'E5' && r['번호'] === 'CZ297510')['맞은개수'] = String(tt('BD774119').score);
+  assert.deepStrictEqual([tt('BD774119').rank, tt('CZ297510').rank, tt('JS603412').rank], [1, 1, 3], '동점');
+  assert.ok(!('scores' in tt('BD774119')) && !JSON.stringify(tt('BD774119')).includes('CZ297510'));
+});
+t('실전반 D·E 는 하나로: 같은 달 같은 이름 시험이면 반 평균·등수·인원을 합쳐서', () => {
+  const e = Mock.seed(Mock.createEnv()), T = e._tables;
+  const d = T['시험'].find(x => x['시험ID'] === 'E5');
+  T['시험'].push(Object.assign({}, d, { '시험ID': 'E5E', '반코드': 'SJ-E' }));
+  const g = Core.grade(d['정답'], d['정답']);
+  T['시험결과'].push({ '시험ID': 'E5E', '번호': 'XA000009', '답안': d['정답'], '맞은개수': String(g.score), '틀린번호': '', '환산점수': '', '입력일': '' });
+  const t = Logic.handle(e, 'login', { code: 'BD774119' }).data.classes.find(x => x.code === 'SJ-D').tests.find(x => x.id === 'E5');
+  assert.deepStrictEqual([t.n, t.rank], [4, 2], 'E반 만점 학생까지 4명, 박테스트는 2등');
+  const B = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 'g' }).data.boot;
+  assert.strictEqual(Logic.itemStats(B, 'E5').here.n, 4, '문항 분석도 D·E 합쳐서');
+});
+t('실전반 달마다 환산점수 평균·등수 (D·E 합쳐서, 그 달 시험을 본 학생 중)', () => {
+  const e = Mock.seed(Mock.createEnv()), v = Logic.handle(e, 'login', { code: 'BD774119' }).data;
+  const ms = Object.keys(v.realMonth); assert.ok(ms.length >= 1);
+  ms.forEach(m => { const o = v.realMonth[m]; assert.ok(o.rank >= 1 && o.rank <= o.n && o.tests >= 1 && o.avg > 0 && o.classAvg > 0, m); });
+  const k = Logic.handle(e, 'login', { code: 'TR520615' }).data;   // 실전반이 아닌 학생은 없음
+  assert.deepStrictEqual(k.realMonth, {});
+});
+console.log('문항 분석 (강사 화면)');
+t('이 반 정답률·누적 정답률(같은 이름·같은 정답의 다른 달·반 포함)·고른 답 분포·많이 고른 오답', () => {
+  const e = Mock.seed(Mock.createEnv());
+  const B = Logic.handle(e, 'adminLogin', { password: 'demo', dev: 'item' }).data.boot;
+  assert.ok(B && B.exams, '강사 데이터');
+  const A = Logic.itemStats(B, 'E5');
+  assert.strictEqual(A.here.n, 3); assert.strictEqual(A.cum.n, 6, '9월 실전E 같은 시험(E8)까지 누적');
+  assert.deepStrictEqual(A.cum.months, ['2026-09', '2026-10']);
+  const q12 = A.items[11];   // E5: 박테스트만 12번 틀림, E8: 셋 다 12번 틀림 → 이 반 2/3, 누적 2/6
+  assert.strictEqual(q12.here.rate, 66.7); assert.strictEqual(q12.cum.rate, 33.3);
+  assert.ok(q12.flags.includes('cumLow') && q12.flags.includes('trap'), q12.flags.join());
+  const wrongCh = String((+q12.key) % 4 + 1);
+  assert.strictEqual(q12.cum.trap.ch, wrongCh); assert.strictEqual(q12.cum.trap.cnt, 4);
+  assert.strictEqual(q12.subj, '현대사회', '시험지 문항과목(예시)');
+  assert.strictEqual(Logic.itemStats(B, 'E6').cum.n, 2, '다른 시험은 따로');
+  assert.strictEqual(Logic.itemStats(B, 'nope'), null);
+});
+console.log('단풀반 EJU 기출 입력');
+t('단풀반 학생만, 정답은 안 보냄, 선생님 입력과 같은 시험결과에 저장, 시험 자동 등록, 한 번만 냄(두 번째는 막힘), 사진·개수로는 못 냄', () => {
+  const e = Mock.seed(Mock.createEnv()), T = e._tables, R = (a, p) => Logic.handle(e, a, p);
+  const key = T['시험지'].find(r => r['시험지ID'] === 'DP-경제-G')['정답']; assert.strictEqual(key.length, 12);
+  const tokOf = c => R('login', { code: c, dev: 'd' + c }).data.tok;
+  const dp = tokOf('NP882013'), gn = tokOf('TR520615');
+  assert.ok(R('login', { code: 'NP882013', dev: 'q' }).data.danpul, '단풀반 표시');
+  assert.ok(R('login', { code: 'TR520615', dev: 'q2' }).data.danpul.length, '개념반 학생도 기출 입력 가능');
+  assert.ok(R('practiceList', { tok: gn }).ok, '개념반 학생도 씀');
+  { const nEx0 = T['시험'].length, n0 = T['숙제'].length, gk = T['시험지'].find(r => r['시험지ID'] === 'GN-경제-G')['정답'], g = R('practiceSubmit', { tok: gn, paper: 'GN-경제-G', answers: gk });
+    assert.ok(g.ok, g.error); assert.strictEqual(g.data.last.score, 16);
+    assert.ok(!R('practiceSubmit', { tok: gn, paper: 'DP-경제-G', answers: key }).ok, '개념반 학생은 단풀 시험지로 못 냄');
+    assert.strictEqual(T['시험'][T['시험'].length - 1]['반코드'], 'GN-HM', '개념반으로 등록'); assert.strictEqual(T['시험'].length, nEx0 + 1);
+    assert.strictEqual(T['숙제'].length, n0, '개념반 기출은 숙제로 안 만듦'); }
+  const list = R('practiceList', { tok: dp }); assert.ok(list.ok);
+  assert.deepStrictEqual(list.data.map(x => [x.id, x.subj, x.n]), [['DP-경제-G', '경제', 12]]);
+  assert.ok(!JSON.stringify(list.data).includes(key), '정답은 안 보냄');
+  const nEx = T['시험'].length;
+  let bad = key.split(''); bad[2] = String(bad[2] % 4 + 1); bad[5] = '0';
+  const r1 = R('practiceSubmit', { tok: dp, paper: 'DP-경제-G', answers: bad.join('') });
+  assert.ok(r1.ok, r1.error); assert.deepStrictEqual(r1.data.last, { label: '경제 EJU 기출', subj: '경제', score: 10, total: 12, wrong: [3, 6] });
+  assert.strictEqual(T['시험'].length, nEx + 1, '이번 달 시험이 없으면 시험지로 자동 등록');
+  const ex = T['시험'][T['시험'].length - 1]; assert.strictEqual(ex['반코드'], 'DP-SS'); assert.strictEqual(ex['이름'], '경제 EJU 기출');
+  const mine = r1.data.classes.find(c => c.code === 'DP-SS').tests.find(t => t.label === '경제 EJU 기출'); assert.strictEqual(mine.score, 10, '단풀반 테스트 목록에 같이 나옴');
+  assert.ok(!R('practiceSubmit', { tok: dp, paper: 'DP-경제-G', answers: '000000000000' }).ok, '빈 답안');
+  assert.ok(!R('practiceSubmit', { tok: dp, paper: 'DP-경제-G', answers: key + '1' }).ok, '문항 수보다 많음');
+  assert.ok(!R('practiceSubmit', { tok: dp, paper: 'DP-경제-M', answers: key }).ok, '월말은 못 냄');
+  const r2 = R('practiceSubmit', { tok: dp, paper: 'DP-경제-G', answers: key });
+  assert.ok(!r2.ok && /한 번만/.test(r2.error), '두 번째 제출은 막음: ' + JSON.stringify(r2));
+  assert.strictEqual(T['시험'].length, nEx + 1, '시험은 하나'); assert.strictEqual(T['시험결과'].filter(r => r['시험ID'] === ex['시험ID'] && r['번호'] === 'NP882013').length, 1);
+  assert.strictEqual(String(T['시험결과'].find(r => r['시험ID'] === ex['시험ID'] && r['번호'] === 'NP882013')['맞은개수']), '10', '맞은 개수는 그대로');
+  assert.ok(!R('practiceSubmit', { paper: 'DP-경제-G', answers: key }).ok, '열쇠 없이는 못 냄');
+  const hw0 = T['숙제'].length;
+  const atok = R('adminLogin', { password: 'demo', dev: 'ht' }).data.token;
+  const tr = R('saveResult', { token: atok, exam: ex['시험ID'], code: 'NP882013', answers: key });
+  assert.ok(tr.ok, JSON.stringify(tr)); { const hs = T['숙제제출'].filter(r => r['번호'] === 'NP882013' && T['숙제'].some(h => h['숙제ID'] === r['숙제ID'] && h['이름'] === '경제 EJU 기출')); assert.strictEqual(hs.length, 1, '선생님이 넣어도 숙제 제출로 기록'); assert.strictEqual(T['숙제'].length, hw0, '숙제는 하나'); }
+  const pe = Object.assign({}, T['시험지'].find(r => r['시험지ID'] === 'DP-경제-G'), { '시험지ID': 'DP-정치-G', '과목': '정치', '이름': '정치 EJU 기출' }); T['시험지'].push(pe);
+  const rx = R('practiceSubmit', { tok: dp, paper: 'DP-정치-G', answers: key }); assert.ok(!rx.ok && /내 단풀반/.test(rx.error), '자기 반 과목만: ' + JSON.stringify(rx));
+  assert.deepStrictEqual(R('practiceList', { tok: dp }).data.map(x => x.subj), ['경제'], '목록도 자기 반 과목만');
+  assert.deepStrictEqual(R('login', { code: 'NP882013', dev: 'q9' }).data.danpul, ['경제']);
+  const hwr = T['숙제'].filter(r => r['반코드'] === 'DP-SS' && r['이름'] === '경제 EJU 기출'); assert.strictEqual(hwr.length, 1, '단풀 EJU 기출은 숙제로도 등록');
+  assert.ok(!R('hwFinish', { tok: dp, hw: hwr[0]['숙제ID'], count: 12 }).ok, '기출 숙제는 맞은 개수를 직접 못 냄');
+  assert.ok(!R('hwPhoto', { tok: dp, hw: hwr[0]['숙제ID'], b64: '/9j/AAAA', hash: '' }).ok, '기출 숙제는 사진으로 못 냄');
+  { const v = R('login', { code: 'NP882013', dev: 'q10' }).data, dc = v.classes.find(c => c.code === 'DP-SS');
+    assert.ok(dc.hw.find(w => w.id === hwr[0]['숙제ID']).practice, '기출 숙제 표시(practice)');
+    assert.ok(dc.tests.filter(t => t.score === null).every(t => t.cum === null), '안 본 시험에는 누적 평균을 안 보냄'); }
+  const sub = T['숙제제출'].filter(r => r['숙제ID'] === hwr[0]['숙제ID'] && r['번호'] === 'NP882013'); assert.strictEqual(sub.length, 1); assert.strictEqual(String(sub[0]['맞은개수']), '12');
+  const adm = R('adminLogin', { password: 'demo', dev: 'itx' });
+  const bs = adm.data.boot;
+  if (bs && bs.exams) { const A = Logic.itemStats(bs, ex['시험ID']); assert.ok(A && A.items.length === 12, '문항 분석에 단풀 EJU 기출'); assert.ok(A.items.some(i => i.here.t > 0)); }
+});
+
+console.log('커리큘럼 (월별 수업계획서)');
+const JPG = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0, 16, 74, 70, 73, 70, 0, 1, 1, 0, 0, 1, 0, 1, 0, 0]).toString('base64');
+function qEnv() {
+  const e = Mock.seed(Mock.createEnv({ now: () => new Date('2026-10-20T12:00:00+09:00') })), R = (a, p) => Logic.handle(e, a, p);
+  const tokOf = c => R('login', { code: c, dev: 'd' + c }).data.tok;
+  const adm = R('adminLogin', { password: 'demo', dev: 'qa' }).data.token;
+  return { e, T: e._tables, R, tokOf, adm };
+}
+t('curriculum: 내가 듣는 반만, 최근 달 먼저, 계획서 줄·머리말·달력, 강사 연락처는 안 보냄', () => {
+  const { R, tokOf } = qEnv();
+  const r = R('curriculum', { tok: tokOf('KM482919') });   // GN-HM(개념) + DP-SS(단풀)
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(r.data.classes.map(c => c.code), ['GN-HM', 'DP-SS']);
+  const gn = r.data.classes[0]; assert.strictEqual(gn.kind, '개념'); assert.strictEqual(gn.time, '화목 20:20'); assert.ok(gn.name);
+  assert.deepStrictEqual(gn.months.map(m => m.month), ['2026-10', '2026-09', '2026-07'], '최근 달 먼저, 과목을 알 수 있는 달만');
+  const oct = gn.months[0];
+  assert.strictEqual(oct.subj, '경제'); assert.strictEqual(oct.rows.length, 5);
+  assert.deepStrictEqual(oct.rows[1], { round: '02', date: '10월8일', content: '10강 국제 수지', range: 'p.89-95', homework: '주간 숙제' });
+  assert.strictEqual(oct.head['강의목표'].slice(0, 5), '경제체제와'); assert.strictEqual(oct.head['담당강사'], '예시 선생님');
+  assert.ok(!('연락처' in oct.head) && !JSON.stringify(r.data).includes('sample-teacher-id'), '강사 연락처는 학생에게 안 보냄');
+  assert.deepStrictEqual(Object.keys(oct.head), ['강의명', '부제', '강의목표', '담당강사', '강의기간', '강의시간', '강의실', '교재', '질문시간', '질문방법', '평가방법']);
+  assert.deepStrictEqual(oct.cal, { start: '2026-10-02', end: '2026-10-31', off: [] });
+  assert.strictEqual(gn.months[1].head && gn.months[1].rows.length, 0, '머리말만 있는 달(9월)'); assert.strictEqual(gn.months[2].head, null, '머리말 없는 달은 null');
+  assert.strictEqual(gn.months[2].rows.length, 8);
+  const dp = r.data.classes[1]; assert.strictEqual(dp.kind, '단풀');
+  assert.deepStrictEqual(dp.months.map(m => m.month), ['2026-08'], '이번 달 단풀 과목(경제)의 계획서는 없고, 8월 단풀 경제만');
+  assert.ok(!JSON.stringify(r.data).includes('정치'), '다른 과목 계획서는 안 섞임');
+});
+t('curriculum: 실전반은 반(D/E)으로 연결, 안 듣는 반·비활성 반은 안 나옴, 열쇠 없으면 거절', () => {
+  const { R, T, tokOf } = qEnv();
+  const r = R('curriculum', { tok: tokOf('CZ297510') });   // SJ-D
+  assert.deepStrictEqual(r.data.classes.map(c => c.code), ['SJ-D']);
+  const m = r.data.classes[0].months; assert.deepStrictEqual(m.map(x => x.month), ['2026-10']); assert.strictEqual(m[0].rows.length, 10); assert.strictEqual(m[0].subj, '');
+  // 실전E 학생: D 계획서는 안 보임
+  const env2 = qEnv(); env2.R('setClasses', { token: env2.adm, code: 'JS603412', classes: ['SJ-E'] });
+  assert.deepStrictEqual(env2.R('curriculum', { tok: env2.tokOf('JS603412') }).data.classes[0].months, [], 'E 반에는 D 계획서가 안 붙음');
+  // 반이 비활성이면 빠짐
+  T['반'].find(c => c['반코드'] === 'SJ-D')['활성'] = 'N';
+  assert.deepStrictEqual(R('curriculum', { tok: tokOf('BD774119') }).data.classes.map(c => c.code), ['GN-HM']);
+  assert.ok(!R('curriculum', {}).ok && R('curriculum', {}).needLogin, '열쇠 없이는 못 봄');
+  assert.ok(!R('curriculum', { tok: 'nope' }).ok);
+});
+
+console.log('QnA');
+const Qf = (R, tok, o) => R('qnaAsk', Object.assign({ tok, subject: '경제', title: '질문 제목', body: '질문 내용', public: true }, o));
+t('qnaList: mine = 내 질문 전부(최신순), pub = 다른 학생의 공개+답변만, 작성자는 가림 이름으로(번호·이름 없음)', () => {
+  const { R, tokOf } = qEnv();
+  const a = R('qnaList', { tok: tokOf('KM482919') }); assert.ok(a.ok, a.error);
+  assert.deepStrictEqual(a.data.mine.map(q => q.id), ['QDEMO3', 'QDEMO2', 'QDEMO1'], '최신순');
+  assert.ok(a.data.mine.every(q => q.mine && q.who === '나'));
+  assert.deepStrictEqual(a.data.pub.map(q => q.id), ['QDEMO4'], '이샘플의 공개+답변만 (대기 공개·비공개 답변·내 것은 빠짐)');
+  const p = a.data.pub[0]; assert.strictEqual(p.who, '이○플'); assert.strictEqual(p.mine, false); assert.strictEqual(p.status, '답변');
+  assert.ok(p.answer && p.answerAt && p.public === true);
+  const j = JSON.stringify(a.data.pub); assert.ok(!j.includes('TR520615') && !j.includes('이샘플'), '작성자 번호·이름은 응답에 없음');
+  assert.deepStrictEqual(Object.keys(a.data.mine[0]).sort(), ['answer', 'answerAt', 'answerPhotos', 'at', 'body', 'id', 'mine', 'photos', 'public', 'status', 'subject', 'title', 'who']);
+  const q1 = a.data.mine[2]; assert.strictEqual(q1.photos.length, 1); assert.strictEqual(q1.answerPhotos.length, 1); assert.strictEqual(q1.status, '답변');
+  // 다른 학생 화면에서는 내 비공개 질문이 안 보임
+  const b = R('qnaList', { tok: tokOf('TR520615') });
+  assert.deepStrictEqual(b.data.mine.map(q => q.id), ['QDEMO4']); assert.deepStrictEqual(b.data.pub.map(q => q.id), ['QDEMO1'], 'KM 의 공개+답변만; QDEMO2·3(대기)·QDEMO5(비공개) 안 보임');
+  assert.strictEqual(b.data.pub[0].who, '김○시');
+  assert.ok(!R('qnaList', {}).ok && !R('qnaList', { tok: 'x' }).ok);
+});
+t('가림 이름: 2자·3자·4자·괄호(지역) 이름', () => {
+  const { R, T, tokOf } = qEnv();
+  T['원생'].find(s => s['일련번호'] === 'TR520615')['이름'] = '배성'; T['질문'][3]['번호'] = 'TR520615';
+  assert.strictEqual(R('qnaList', { tok: tokOf('KM482919') }).data.pub[0].who, '배○');
+  T['원생'].find(s => s['일련번호'] === 'TR520615')['이름'] = '남궁 민수(서울)';
+  assert.strictEqual(R('qnaList', { tok: tokOf('KM482919') }).data.pub[0].who, '남○○수');
+  T['원생'].find(s => s['일련번호'] === 'TR520615')['이름'] = '배대성';
+  assert.strictEqual(R('qnaList', { tok: tokOf('KM482919') }).data.pub[0].who, '배○성');
+});
+t('qnaAsk: 저장·공개 선택·사진(최대 3장, JPEG만, 3MB)·길이 제한·빈 값 거절', () => {
+  const { R, T, tokOf } = qEnv(), tok = tokOf('NP882013'), n0 = T['질문'].length;
+  const r = Qf(R, tok, { public: false, photos: [{ b64: JPG }, { b64: JPG }] }); assert.ok(r.ok, r.error); assert.ok(r.data.id);
+  const row = T['질문'].find(x => x['질문ID'] === r.data.id);
+  assert.strictEqual(T['질문'].length, n0 + 1); assert.strictEqual(row['번호'], 'NP882013'); assert.strictEqual(row['공개'], 'N'); assert.strictEqual(row['상태'], '대기');
+  assert.strictEqual(row['작성일'], '2026-10-20 12:00'); assert.strictEqual(row['사진'].split(',').length, 2); assert.strictEqual(row['답변'], '');
+  assert.ok(!/NP882013/.test(row['사진']) && Object.keys(R('qnaList', { tok }).data.mine[0]).length, '파일ID 에 학생 번호가 안 들어감');
+  assert.strictEqual(Qf(R, tok).ok && T['질문'].pop()['공개'], 'Y', '공개로 올림');
+  assert.ok(!R('qnaAsk', { tok, subject: '경제', title: '', body: 'x', public: true }).ok, '빈 제목');
+  assert.ok(!R('qnaAsk', { tok, subject: '경제', title: 'x', body: '  ', public: true }).ok, '빈 내용');
+  assert.ok(!R('qnaAsk', { tok, subject: '수학', title: 'x', body: 'x' }).ok, '과목');
+  assert.ok(!Qf(R, tok, { title: 'a'.repeat(81) }).ok); assert.ok(Qf(R, tok, { title: 'a'.repeat(80) }).ok);
+  assert.ok(!Qf(R, tok, { body: 'a'.repeat(2001) }).ok); assert.ok(Qf(R, tok, { body: 'a'.repeat(2000) }).ok);
+  assert.ok(!Qf(R, tok, { photos: [{ b64: JPG }, { b64: JPG }, { b64: JPG }, { b64: JPG }] }).ok, '4장');
+  assert.ok(!Qf(R, tok, { photos: [{ b64: 'iVBORw0KGgo=' }] }).ok, 'PNG 거절');
+  assert.ok(!Qf(R, tok, { photos: [{ b64: '/9j/' + 'A'.repeat(4 * 1024 * 1024) }] }).ok, '3MB 넘는 사진');
+  assert.ok(!Qf(R, tok, { photos: [{}] }).ok, '빈 사진');
+  assert.ok(!R('qnaAsk', { subject: '경제', title: 'x', body: 'x' }).ok, '열쇠 없이는 못 올림');
+  assert.ok(Qf(R, tok, { public: undefined }).ok && T['질문'].pop()['공개'] === 'N', '공개를 안 정하면 비공개');
+});
+t('qnaAsk: 1분에 5건 넘으면 거절, 1분이 지나면 다시 올릴 수 있음', () => {
+  let clock = new Date('2026-10-20T12:00:00+09:00');
+  const e = Mock.seed(Mock.createEnv({ now: () => clock })), R = (a, p) => Logic.handle(e, a, p);
+  const tok = R('login', { code: 'NP882013', dev: 'rl' }).data.tok, tok2 = R('login', { code: 'WX446818', dev: 'rl2' }).data.tok;
+  for (let i = 0; i < 5; i++) assert.ok(Qf(R, tok).ok, i + '번째');
+  const x = Qf(R, tok); assert.ok(!x.ok && /1분/.test(x.error), JSON.stringify(x));
+  assert.ok(Qf(R, tok2).ok, '다른 학생은 따로 셈');
+  assert.strictEqual(e._tables['질문'].filter(q => q['번호'] === 'NP882013').length, 5, '거절된 것은 저장 안 됨');
+  const k = 'qna:rate:NP882013'; e.cache.remove(k);   // 1분 지남(캐시 만료와 같음)
+  assert.ok(Qf(R, tok).ok);
+});
+t('qnaPhoto: 내 질문 사진·내 질문 답변 사진·공개+답변된 질문 사진만, 남의 비공개·대기 질문 사진은 거절', () => {
+  const { R, T, e, tokOf } = qEnv();
+  const km = tokOf('KM482919'), tr = tokOf('TR520615'), np = tokOf('NP882013');
+  const q1 = T['질문'].find(q => q['질문ID'] === 'QDEMO1'), qp = q1['사진'], ap = q1['답변사진'];
+  const mine = R('qnaPhoto', { tok: km, id: qp }); assert.ok(mine.ok, mine.error); assert.strictEqual(mine.data.mime, 'image/svg+xml'); assert.ok(mine.data.b64);
+  assert.ok(R('qnaPhoto', { tok: km, id: ap }).ok, '내 질문의 답변 사진');
+  assert.ok(R('qnaPhoto', { tok: tr, id: qp }).ok && R('qnaPhoto', { tok: np, id: ap }).ok, '공개+답변된 질문 사진(질문·답변)은 다른 학생도');
+  // 비공개로 바뀌면 다른 학생은 못 읽음
+  q1['공개'] = 'N'; assert.ok(!R('qnaPhoto', { tok: tr, id: qp }).ok, '비공개');
+  q1['공개'] = 'Y'; q1['상태'] = '대기'; assert.ok(!R('qnaPhoto', { tok: tr, id: qp }).ok, '공개여도 답변 전');
+  assert.ok(R('qnaPhoto', { tok: km, id: qp }).ok, '그래도 내 것은 읽음');
+  // 질문 줄에 없는 파일(숙제 사진)은 못 읽음
+  const hwId = T['숙제사진'][0]['파일ID']; assert.ok(e._images[hwId]); assert.ok(!R('qnaPhoto', { tok: km, id: hwId }).ok, '숙제 사진은 이 길로 못 읽음');
+  assert.ok(!R('qnaPhoto', { tok: km, id: '' }).ok && !R('qnaPhoto', { id: qp }).ok);
+});
+t('qnaDelete: 내가 쓴 답 없는 질문만 (사진 파일도 지움), 남의 질문·답변 달린 질문은 거절', () => {
+  const { R, T, e, tokOf } = qEnv(), km = tokOf('KM482919'), tr = tokOf('TR520615');
+  const mk = Qf(R, km, { photos: [{ b64: JPG }] }).data.id, f = T['질문'].find(q => q['질문ID'] === mk)['사진'];
+  assert.ok(e._images[f]);
+  assert.ok(!R('qnaDelete', { tok: tr, id: mk }).ok, '남의 질문');
+  assert.ok(!R('qnaDelete', { tok: km, id: 'QDEMO1' }).ok, '답변 달린 질문');
+  assert.ok(!R('qnaDelete', { tok: km, id: 'nope' }).ok);
+  const d = R('qnaDelete', { tok: km, id: mk }); assert.ok(d.ok && d.data.removed === mk);
+  assert.ok(!T['질문'].some(q => q['질문ID'] === mk)); assert.ok(!e._images[f], '사진 파일도 지워짐');
+  assert.ok(R('qnaDelete', { tok: km, id: 'QDEMO2' }).ok, '대기 질문은 지울 수 있음');
+  assert.ok(!R('qnaDelete', { id: 'QDEMO3' }).ok, '열쇠 없이는 못 지움');
+  assert.ok(!R('qnaEdit', { tok: km, id: 'QDEMO3', title: 'x' }).ok, 'qnaEdit 는 없음');
+});
+t('강사: 목록(대기 먼저·오래된 순, 번호·이름·반 포함)·답변·수정·공개 바꾸기·사진·삭제, 학생 열쇠로는 못 씀', () => {
+  const { R, T, e, tokOf, adm } = qEnv(), km = tokOf('KM482919');
+  const l = R('qnaAdminList', { token: adm }); assert.ok(l.ok, l.error);
+  assert.deepStrictEqual(l.data.map(q => q.status), ['대기', '대기', '대기', '답변', '답변', '답변'], '대기 먼저');
+  assert.deepStrictEqual(l.data.slice(0, 3).map(q => q.id), ['QDEMO2', 'QDEMO3', 'QDEMO6'], '대기는 오래된 순');
+  const q2 = l.data[0]; assert.strictEqual(q2.code, 'KM482919'); assert.strictEqual(q2.name, '김예시'); assert.deepStrictEqual(q2.classes, ['개념반 화목 20:20', '단풀반 토일 13:00']); assert.strictEqual(q2.public, false);
+  assert.deepStrictEqual(R('qnaAdminList', { token: adm, status: '답변' }).data.map(q => q.id), ['QDEMO1', 'QDEMO4', 'QDEMO5'], '답변은 최근 답변 먼저')
+  assert.ok(R('qnaAdminList', { token: adm, status: '답변' }).data.every(q => q.status === '답변'));
+  assert.strictEqual(R('qnaAdminList', { token: adm, status: '대기' }).data.length, 3);
+  assert.ok(!R('qnaAdminList', { token: km }).ok && R('qnaAdminList', { token: km }).needLogin, '학생 열쇠로는 못 씀');
+  assert.ok(!R('qnaAdminList', {}).ok && !R('qnaAnswer', { token: 'x', id: 'QDEMO2', answer: 'a' }).ok);
+  // 답변: 학생이 고른 공개 값 유지
+  const a = R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: '의원내각제는 권력 융합형이라 삼권분립과 구별해서 설명해요.', photos: [{ b64: JPG }] });
+  assert.ok(a.ok, a.error); assert.strictEqual(a.data.status, '답변'); assert.strictEqual(a.data.answerAt, '2026-10-20 12:00'); assert.strictEqual(a.data.public, true); assert.strictEqual(a.data.answerPhotos.length, 1); assert.strictEqual(a.data.name, '김예시');
+  assert.ok(R('qnaList', { tok: tokOf('TR520615') }).data.pub.some(q => q.id === 'QDEMO3'), '답변이 달린 공개 질문은 이제 모두에게');
+  const f1 = a.data.answerPhotos[0];
+  // 수정: 사진 하나 더, 공개 → 비공개
+  const b = R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: '고친 답변', public: false, photos: [{ b64: JPG }] });
+  assert.ok(b.ok && b.data.answer === '고친 답변' && b.data.public === false && b.data.answerPhotos.length === 2 && b.data.answerPhotos[0] === f1);
+  assert.ok(!R('qnaList', { tok: tokOf('TR520615') }).data.pub.some(q => q.id === 'QDEMO3'), '비공개로 바꾸면 빠짐');
+  const c = R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: '고친 답변', removePhotos: [f1, 'not-mine'] });
+  assert.deepStrictEqual(c.data.answerPhotos, [b.data.answerPhotos[1]]); assert.ok(!e._images[f1], '지운 답변 사진 파일도 지워짐'); assert.strictEqual(c.data.public, false, 'public 생략하면 유지');
+  assert.ok(!R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: 'x', photos: [{ b64: JPG }, { b64: JPG }, { b64: JPG }] }).ok, '답변 사진 합쳐서 3장까지');
+  assert.ok(!R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: '  ' }).ok && !R('qnaAnswer', { token: adm, id: 'none', answer: 'x' }).ok);
+  assert.ok(!R('qnaAnswer', { token: adm, id: 'QDEMO3', answer: 'x', photos: [{ b64: 'iVBOR' }] }).ok, '답변 사진도 JPEG 만');
+  // 사진 읽기(강사): 질문·답변 사진 모두, 비공개여도
+  const ph = R('qnaAdminPhoto', { token: adm, id: T['질문'].find(q => q['질문ID'] === 'QDEMO1')['사진'] }); assert.ok(ph.ok && ph.data.b64);
+  assert.ok(!R('qnaAdminPhoto', { token: adm, id: T['숙제사진'][0]['파일ID'] }).ok, '숙제 사진은 이 길로 못 읽음');
+  assert.ok(!R('qnaAdminPhoto', { token: km, id: T['질문'][0]['사진'] }).ok, '학생 열쇠로는 못 읽음');
+  // 삭제
+  const sp = T['질문'].find(q => q['질문ID'] === 'QDEMO1')['사진'];
+  const d = R('qnaAdminDelete', { token: adm, id: 'QDEMO1' }); assert.ok(d.ok && d.data.removed === 'QDEMO1'); assert.ok(!e._images[sp]); assert.ok(!T['질문'].some(q => q['질문ID'] === 'QDEMO1'));
+  assert.ok(!R('qnaAdminDelete', { token: adm, id: 'QDEMO1' }).ok && !R('qnaAdminDelete', { token: km, id: 'QDEMO2' }).ok);
+});
+t('QnA·커리큘럼 쓰기 요청은 WRITES(서버 잠금) 목록에 있음, 읽기는 없음', () => {
+  ['qnaAsk', 'qnaDelete', 'qnaAnswer', 'qnaAdminDelete'].forEach(a => assert.ok(Logic.WRITES.includes(a), a));
+  ['curriculum', 'qnaList', 'qnaPhoto', 'qnaAdminList', 'qnaAdminPhoto'].forEach(a => assert.ok(!Logic.WRITES.includes(a), a));
+  assert.deepStrictEqual(Logic.TABLES['질문'], ['질문ID', '번호', '과목', '제목', '내용', '공개', '작성일', '상태', '답변', '답변일', '사진', '답변사진']);
+});
+console.log(`\n${passed} passed` + (process.exitCode ? ', 실패 있음' : ''));

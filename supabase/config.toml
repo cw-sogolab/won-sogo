@@ -1,0 +1,4 @@
+# Supabase CLI 설정 — 이 폴더(supabase/)가 프로젝트 루트의 supabase/ 로 쓰입니다.
+[functions.api]
+# 로그인 열쇠는 우리 쪽(logic.js)이 확인하므로 Supabase 의 JWT 확인은 끈다 (Apps Script 웹앱과 같은 방식)
+verify_jwt = false

@@ -1,0 +1,18 @@
+# 매일 새벽 3시(한국) — 서버를 깨워 두고(무료 플랜은 7일 접속이 없으면 정지) 3개월 지난 숙제 사진을 지움.
+# 저장소 Settings → Secrets 에 SUPABASE_FN_URL (…/functions/v1/api) 와 CRON_KEY (Supabase kv_props 의 CRON_KEY 와 같은 값)를 넣어야 함.
+name: cron
+on:
+  schedule: [{ cron: '0 18 * * *' }]
+  workflow_dispatch: {}
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    steps:
+      - name: keepalive + 사진 정리
+        env:
+          URL: ${{ secrets.SUPABASE_FN_URL }}
+          KEY: ${{ secrets.CRON_KEY }}
+        run: |
+          curl -fsS -X POST "$URL" -H 'content-type: application/json' -d "{\"action\":\"cron\",\"payload\":{\"job\":\"keepalive\",\"key\":\"$KEY\"}}"
+          echo
+          curl -fsS -X POST "$URL" -H 'content-type: application/json' -d "{\"action\":\"cron\",\"payload\":{\"job\":\"cleanupPhotos\",\"key\":\"$KEY\"}}"
