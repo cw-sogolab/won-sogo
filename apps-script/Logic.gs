@@ -56,7 +56,7 @@ var Logic = (function () {
     '퀴즈기록': ['시각', '번호', '이름', '반', '범위', '첫시도정답', '시도횟수']
   };
   /** 서버·화면 코드 버전 — tools/sync-gas.sh 가 core.js·logic.js·Code.gs 내용으로 자동으로 바꿈. 화면이 서버 응답의 ver 와 비교해 다르면 경고 */
-  var VERSION = '80359dbffe';
+  var VERSION = '774a663a76';
   /** 숫자로 바뀌면 안 되는 열(앞자리 0, 긴 숫자열) — Code.gs 가 텍스트 서식으로 고정 */
   var TEXT_COLS = ['시험지ID', '일련번호', '번호', '정답', '답안', '오답답안', '틀린번호', '반코드', '시험ID', '숙제ID', '파일ID', '월', '시험일', '개강', '종강', '휴강', '마감', '질문ID', '작성일', '답변일', '사진', '답변사진'];
   var STU_TTL = 6 * 3600;            // 학생 로그인 열쇠 유효 시간
@@ -1232,24 +1232,28 @@ var Logic = (function () {
     ['body', 'lavender', '라벤더', 'basic'], ['body', 'peach', '피치', 'basic'],
     ['body', 'mint', '민트', 'hip', '3일 연속 출석', 'streak', 3],
     ['body', 'sky', '스카이', 'hip', '7일 연속 출석', 'streak', 7],
-    ['body', 'butter', '버터', 'rare', '소테스트 만점', 'smallFull', 1],
+    ['body', 'butter', '버터', 'rare', '소테스트 만점', 'smallFull', 1, 'mockTop3', 1],
     ['hat', 'none', '없음', 'basic'], ['hat', 'cap', '캡', 'basic'],
     ['hat', 'beanie', '비니', 'hip', '퇴근 미션 10회 참가', 'quizN', 10],
     ['hat', 'headphone', '헤드폰', 'hip', '퇴근 미션 30회 참가', 'quizN', 30],
     ['hat', 'hood', '후드', 'hip', '숙제 기한 내 10번', 'hwOnTime', 10],
     ['hat', 'bucket', '버킷햇', 'hip', '숙제 기한 내 30번', 'hwOnTime', 30],
-    ['hat', 'crown', '왕관', 'rare', '월말테스트 95% 이상', 'monthBest', 95],
+    ['hat', 'crown', '왕관', 'rare', '월말테스트 95% 이상', 'monthBest', 95, 'mockTop3', 1],
     ['glasses', 'none', '없음', 'basic'], ['glasses', 'round', '동글 안경', 'basic'],
     ['glasses', 'sun', '선글라스', 'hip', '퇴근 미션 첫 도전 통과 5번', 'passN', 5],
     ['glasses', 'square', '네모 안경', 'hip', '퇴근 미션 첫 도전 통과 20번', 'passN', 20],
-    ['glasses', 'star', '별 안경', 'rare', '월말테스트 80% 이상', 'monthBest', 80],
+    ['glasses', 'star', '별 안경', 'rare', '월말테스트 80% 이상', 'monthBest', 80, 'mockTop3', 1],
     ['charm', 'none', '없음', 'basic'], ['charm', 'star', '별 키링', 'basic'],
     ['charm', 'heart', '하트', 'hip', 'QnA 첫 질문', 'qna', 1],
     ['charm', 'bolt', '번개', 'hip', '퇴근 미션 연습 100문제', 'pracQ', 100],
     ['charm', 'chain', '체인', 'hip', '출석 30일', 'days', 30],
-    ['charm', 'fuji', '후지산', 'rare', '지난달보다 월말 +10점', 'monthUp', 10],
-    ['charm', 'sakura', '벚꽃', 'rare', '소테스트 만점 5번', 'smallFull', 5]
-  ].map(function (a) { return { kind: a[0], id: a[1], name: a[2], grade: a[3], cond: a[4] || '처음부터', stat: a[5] || '', goal: a[6] || 0 }; });
+    ['charm', 'fuji', '후지산', 'rare', '지난달보다 월말 +10점', 'monthUp', 10, 'mockTop3', 1],
+    ['charm', 'sakura', '벚꽃', 'rare', '소테스트 만점 5번', 'smallFull', 5, 'mockTop3', 5]
+  ].map(function (a) {
+    // a[7]·a[8] = 또 다른 길(실전반: 모의고사 3등 안 횟수, 2026-11-26 사용자 결정). 둘 중 하나만 채우면 얻음
+    var alt = a[7] ? { stat: a[7], goal: a[8], cond: '모의고사 3등 안' + (a[8] > 1 ? ' ' + a[8] + '번' : '') } : null;
+    return { kind: a[0], id: a[1], name: a[2], grade: a[3], cond: (a[4] || '처음부터') + (alt ? ' · 또는 ' + alt.cond : ''), stat: a[5] || '', goal: a[6] || 0, alt: alt };
+  });
   var CHAR_RATE = 30, CHAR_RATE_SEC = 60;   // 꾸미기 저장은 1분에 30번까지
   function charItem(kind, id) { return CHAR_ITEMS.filter(function (x) { return x.kind === kind && x.id === id; })[0] || null; }
   function quizRows(env) {
@@ -1259,7 +1263,7 @@ var Logic = (function () {
   function dayNum(d) { return Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000; }
   /** 한 학생의 꾸미기 조건 계산값 */
   function charStats(env, stu) {
-    var code = stu.code, days = {}, o = { streak: 0, days: 0, quizN: 0, passN: 0, pracQ: 0, hwOnTime: 0, qna: 0, smallFull: 0, monthBest: 0, monthUp: 0 };
+    var code = stu.code, days = {}, o = { streak: 0, days: 0, quizN: 0, passN: 0, pracQ: 0, hwOnTime: 0, qna: 0, smallFull: 0, monthBest: 0, monthUp: 0, mockTop3: 0 };
     quizRows(env).forEach(function (r) {
       if (C.normCode(r['번호']) !== code) return;
       var cls = S(r['반']).trim(); if (cls === '원외생') return;
@@ -1292,6 +1296,18 @@ var Logic = (function () {
         (perMonth[e.month] || (perMonth[e.month] = [])).push(pct);
       }
     });
+    // 모의고사 3등 안: 같은 시험 묶음(실전 D·E 합침, groupKey)에서 나보다 높은 점수 수 + 1 ≤ 3 (같은 점수는 같은 등수)
+    var kindOfCls = {}; classes(env).forEach(function (c) { kindOfCls[c.code] = c.kind; });
+    var mockGroups = {};
+    results(env).forEach(function (r) {
+      var e = exById[r.exam];
+      if (!e || e.kind !== '모의고사' || !e.total || r.score > e.total) return;
+      var g = groupKey(e, kindOfCls); (mockGroups[g] || (mockGroups[g] = [])).push(r);
+    });
+    Object.keys(mockGroups).forEach(function (g) {
+      var rs = mockGroups[g], me = rs.filter(function (r) { return r.code === code; })[0];
+      if (me && 1 + rs.filter(function (r) { return r.score > me.score; }).length <= 3) o.mockTop3++;
+    });
     var ms = Object.keys(perMonth).filter(Boolean).sort();
     for (var i = 1; i < ms.length; i++) { var up = C.mean(perMonth[ms[i]]) - C.mean(perMonth[ms[i - 1]]); if (up > o.monthUp) o.monthUp = up; }
     o.monthBest = Math.round(o.monthBest * 10) / 10; o.monthUp = Math.round(o.monthUp * 10) / 10;
@@ -1302,10 +1318,12 @@ var Logic = (function () {
   function charItemsFor(env, stu, st) {
     var all = charUnlockAll(env), earned = 0;
     var items = CHAR_ITEMS.map(function (x) {
-      var got = x.grade === 'basic' || st[x.stat] >= x.goal;
+      var got = x.grade === 'basic' || st[x.stat] >= x.goal || !!(x.alt && st[x.alt.stat] >= x.alt.goal);
       if (got && x.grade !== 'basic') earned++;
-      return { id: x.id, kind: x.kind, grade: x.grade, name: x.name, owned: all || got, cond: x.cond,
-        progress: x.grade === 'basic' ? null : { now: Math.min(x.goal, st[x.stat]), goal: x.goal } };
+      // 진행도: 두 길 중 더 많이 찬 쪽
+      var pg = x.grade === 'basic' ? null : { now: Math.min(x.goal, st[x.stat]), goal: x.goal };
+      if (pg && x.alt && Math.min(1, st[x.alt.stat] / x.alt.goal) > pg.now / pg.goal) pg = { now: Math.min(x.alt.goal, st[x.alt.stat]), goal: x.alt.goal };
+      return { id: x.id, kind: x.kind, grade: x.grade, name: x.name, owned: all || got, cond: x.cond, progress: pg };
     });
     return { items: items, earned: earned };
   }

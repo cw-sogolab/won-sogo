@@ -804,7 +804,7 @@ t('charGet: 기록으로 계산한 얻은 아이템·진행·별 (출석 = 접�
   assert.deepStrictEqual(pick(d.items, 'charm', 'chain').progress, { now: 15, goal: 30 }, '출석한 날 수');
   assert.deepStrictEqual(pick(d.items, 'hat', 'hood').progress, { now: 2, goal: 10 }, '숙제 기한 내 2번(H1·H2)');
   assert.deepStrictEqual(pick(d.items, 'glasses', 'star').progress, { now: 72.5, goal: 80 }, '월말 29/40');
-  assert.strictEqual(pick(d.items, 'glasses', 'star').cond, '월말테스트 80% 이상');
+  assert.strictEqual(pick(d.items, 'glasses', 'star').cond, '월말테스트 80% 이상 · 또는 모의고사 3등 안');
   assert.strictEqual(d.star, 5 * 10 + 6 * 2, '별 = 얻은 아이템 5 × 10 + 통과 6 × 2');
   const b = R('charGet', { tok: tokOf('BD774119') }).data;   // 퇴근 미션 3번(만점 2번) + 늦게 낸 숙제 2개
   assert.deepStrictEqual(pick(b.items, 'hat', 'beanie').progress, { now: 3, goal: 10 }); assert.deepStrictEqual(pick(b.items, 'hat', 'hood').progress, { now: 0, goal: 10 }, '늦게 낸 숙제는 안 셈');
@@ -871,3 +871,22 @@ t('CHAR_UNLOCK_ALL=Y: 모든 아이템 owned, 조건·진행·별은 규칙대�
   assert.ok(!R('charGet', { tok }).data.items.every(x => x.owned));
 });
 console.log(`\n${passed} passed` + (process.exitCode ? ', 실패 있음' : ''));
+
+t('희귀 아이템: 실전반은 모의고사 3등 안(D·E 합쳐서 등수)이면 얻음, 벚꽃은 5번', () => {
+  const e = Mock.seed(Mock.createEnv());
+  const ex = e._tables['시험'].filter(x => x['종류'] === '모의고사');
+  assert.ok(ex.length >= 1, '미리보기 데이터에 모의고사 있음');
+  const res = e._tables['시험결과'];
+  // 한 모의고사에서 가장 높은 점수를 받은 학생 찾기
+  const e0 = ex[0]['시험ID'];
+  const rs = res.filter(r => r['시험ID'] === e0 && +r['맞은개수'] <= +ex[0]['문항수']);
+  const top = rs.slice().sort((a, b) => b['맞은개수'] - a['맞은개수'])[0];
+  const r = Logic.handle(e, 'login', { code: top['번호'], dev: 'mock3' });
+  const g = Logic.handle(e, 'charGet', { tok: r.data.tok });
+  assert.ok(g.ok, g.error);
+  const it = (k, id) => g.data.items.find(x => x.kind === k && x.id === id);
+  ['butter', 'crown'].forEach(id => { const x = id === 'butter' ? it('body', id) : it('hat', id); assert.ok(x.owned, id + ' 얻음'); assert.ok(/모의고사 3등 안/.test(x.cond)); });
+  const sak = it('charm', 'sakura');
+  assert.ok(/모의고사 3등 안 5번/.test(sak.cond));
+});
+
