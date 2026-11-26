@@ -13,12 +13,18 @@ export function makeRunner({ Logic, q, tx, storage, now = () => new Date(), uuid
   const props = new Map();  // 설정 키 → 값|null
   const imgs = new Map();   // 사진 경로 → {mime,b64}
   let logRows = null, propsAll = false;
+  const logBy = new Map();  // 학생 번호 → 그 학생 접속기록 (readLog(code))
   const stats = { passes: 0 };
-  const cols = t => Logic.TABLES[t] || (t === '접속기록' ? Logic.ACCESS_HEAD : null);
+  const RO = Logic.READONLY || {};   // 규칙이 읽기만 하는 표 (퀴즈기록) — 쓰면 오류
+  const cols = t => Logic.TABLES[t] || RO[t] || (t === '접속기록' ? Logic.ACCESS_HEAD : null);
+  const roCheck = t => { if (RO[t]) throw new Error('표 「' + t + '」는 읽기만 해요.'); };
+  // 읽기 전용 표 읽기: 퀴즈기록 「시각」은 timestamptz 라서 한국 시각 'YYYY-MM-DD HH:MM' 글자로 (성적노트 다른 표의 시각 모양과 같게)
+  const roSql = t => 'select id, ' + RO[t].map(h => h === '시각' ? `to_char(${Q(h)} at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI') as ${Q(h)}` : Q(h)).join(', ') + ' from public.' + Q(t) + ' order by id';
+  const logObj = r => { const o = {}; Logic.ACCESS_HEAD.forEach(h => { o[h] = S(r[h]); }); return o; };
 
   async function run(action, payload, { write, fn } = {}) {
     // 요청마다 처음부터 읽음(다른 Edge 인스턴스가 쓴 것을 놓치지 않게). 쓰기 요청은 읽기 전에 잠금부터 잡아 읽고-고치고-쓰는 사이에 끼어들지 못하게 함
-    Object.keys(base).forEach(k => delete base[k]); kv.clear(); props.clear(); imgs.clear(); logRows = null; propsAll = false; stats.passes = 0;
+    Object.keys(base).forEach(k => delete base[k]); kv.clear(); props.clear(); imgs.clear(); logRows = null; logBy.clear(); propsAll = false; stats.passes = 0;
     if (write) return tx(async qq => { await qq('select pg_advisory_xact_lock(7101)'); return go(qq, true, action, payload, fn); });
     return go(q, false, action, payload, fn);
   }
@@ -40,16 +46,16 @@ export function makeRunner({ Logic, q, tx, storage, now = () => new Date(), uuid
       const work = {}, cacheW = new Map(), accessNew = [], uploads = [], removes = [], missing = new Map();
       const T = t => {
         if (!cols(t)) throw new Error('표 「' + t + '」가 없어요.');
-        if (!base[t]) { missing.set('t:' + t, async () => { base[t] = (await qr('select * from public.' + Q(t) + ' order by id')).map(r => Object.assign(r, { id: Number(r.id) })); }); return { rows: [], ids: new Set() }; }
+        if (!base[t]) { missing.set('t:' + t, async () => { base[t] = (await qr(RO[t] ? roSql(t) : 'select * from public.' + Q(t) + ' order by id')).map(r => Object.assign(r, { id: Number(r.id) })); }); return { rows: [], ids: new Set() }; }
         return work[t] || (work[t] = { rows: base[t].map(r => Object.assign({}, r)), ids: new Set(base[t].map(r => r.id)) });
       };
       const env = {
         store: {
           all: t => T(t).rows.map(r => { const o = {}; cols(t).forEach(h => { o[h] = S(r[h]); }); return o; }),
           head: t => cols(t).slice(),
-          append: (t, o) => { const w = T(t), r = { id: null }; cols(t).forEach(h => { r[h] = o[h] === undefined || o[h] === null ? '' : S(o[h]); }); w.rows.push(r); },
-          update: (t, pred, patch) => { let n = 0; T(t).rows.forEach(r => { if (!pred(shape(t, r))) return; Object.keys(patch).forEach(k => { if (cols(t).indexOf(k) >= 0) r[k] = S(patch[k]); }); n++; }); return n; },
-          remove: (t, pred) => { const w = T(t), before = w.rows.length; w.rows = w.rows.filter(r => !pred(shape(t, r))); return before - w.rows.length; },
+          append: (t, o) => { roCheck(t); const w = T(t), r = { id: null }; cols(t).forEach(h => { r[h] = o[h] === undefined || o[h] === null ? '' : S(o[h]); }); w.rows.push(r); },
+          update: (t, pred, patch) => { roCheck(t); let n = 0; T(t).rows.forEach(r => { if (!pred(shape(t, r))) return; Object.keys(patch).forEach(k => { if (cols(t).indexOf(k) >= 0) r[k] = S(patch[k]); }); n++; }); return n; },
+          remove: (t, pred) => { roCheck(t); const w = T(t), before = w.rows.length; w.rows = w.rows.filter(r => !pred(shape(t, r))); return before - w.rows.length; },
           flush() {}, warm() {}
         },
         cache: {
@@ -68,9 +74,16 @@ export function makeRunner({ Logic, q, tx, storage, now = () => new Date(), uuid
         } },
         now, uuid, rand32,
         logAccess: row => { accessNew.push(row); },
-        readLog: () => {
+        // 접속기록 줄은 {시각,번호,이름,구분,기기} 객체 (Code.gs·mock 과 같은 모양 — 예전에는 배열이라 강사 「접속」 요약이 비었음).
+        // code 를 주면 그 학생 줄만 (꾸미기 출석 계산 — 전체 최근 20000줄 제한에 옛 기록이 잘리지 않게)
+        readLog: code => {
+          if (code) {
+            const c = S(code);
+            if (!logBy.has(c)) { missing.set('l:' + c, async () => { logBy.set(c, await qr('select * from public."접속기록" where "번호"=$1 order by id', [c])); }); return []; }
+            return logBy.get(c).map(logObj).concat(accessNew.filter(r => S(r['번호']) === c).map(logObj));
+          }
           if (!logRows) { missing.set('l', async () => { logRows = await qr('select * from public."접속기록" order by id desc limit 20000'); }); return []; }
-          return logRows.map(r => Logic.ACCESS_HEAD.map(h => S(r[h]))).reverse().concat(accessNew.map(r => Logic.ACCESS_HEAD.map(h => S(r[h]))));
+          return logRows.map(logObj).reverse().concat(accessNew.map(logObj));
         },
         saveImage: o => {
           // Storage 경로는 영문·숫자·._- 만 (한글·공백·콜론이 든 반 이름·숙제 이름은 경로에 안 씀 — 뜻은 「숙제사진」 표가 가짐)
@@ -101,7 +114,7 @@ export function makeRunner({ Logic, q, tx, storage, now = () => new Date(), uuid
         };
         if (inTx) await commit(qr); else await tx(commit);
         // 다음 요청이 새 내용을 보게 함 (이 러너가 오래 살아 있을 때 대비)
-        Object.keys(work).forEach(t => { delete base[t]; }); kv.clear(); logRows = null;
+        Object.keys(work).forEach(t => { delete base[t]; }); kv.clear(); logRows = null; logBy.clear();
       }
       for (const id of removes) { try { await storage.remove(id); } catch (e) { /* 파일이 이미 없으면 그냥 둠 */ } }
       return result;

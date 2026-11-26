@@ -7,12 +7,16 @@
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script>
+/* 테마: ?theme=light|dark → 없으면 기기 설정 (허브가 <html data-theme> 를 정하는 것 흉내) */
+(function () { var t = new URLSearchParams(location.search).get('theme'); if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="stylesheet" href="../assets/ds.css">
 <link rel="stylesheet" href="qna.css">
 <style>
 /* 허브 틀 흉내: 바탕색만 가진 빈 페이지. ?clash 로 열면 전역 규칙을 일부러 심어 .qna 가 흔들리는지 확인 */
 html,body{margin:0}
-body{background:#F5F3FF;font-family:sans-serif}
-@media (prefers-color-scheme: dark){body{background:#14122B;color:#fff}}
+body{background:var(--bg);color:var(--ink);font-family:sans-serif}
 .tb{padding:10px 16px;font:600 13px sans-serif;background:#ff6a3d;color:#fff;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
 .tb a{color:#fff}
 .tb input{font:inherit;padding:4px 8px;border-radius:6px;border:0;width:140px}
@@ -28,6 +32,7 @@ body.clash *{font-family:serif}
 <div class="tb" id="tb"></div>
 <div class="cols" id="cols"></div>
 <script src="../assets/mascots.js"></script>
+<script src="../assets/mongle.js"></script>
 <script src="../hub-session.js"></script>
 <script src="qna.js"></script>
 <script>
@@ -120,6 +125,8 @@ function fake(action, p, role) {
 }
 function later(v) { return new Promise(function (r) { setTimeout(function () { r(v); }, 350); }); }
 var demoSession = {
+  name: '가상민',
+  char: function () { return Promise.resolve({ ok: true, data: { state: { body: 'mint', hat: 'beanie', glasses: 'round', charm: 'star' }, show: !Q.has('nochar') } }); },
   call: function (a, p) { return DOWN ? later({ ok: false, error: '인터넷 연결을 확인해 주세요.' }) : later(fake(a, p, 'student')); },
   adminCall: function (a, p) { return DOWN ? later({ ok: false, error: '인터넷 연결을 확인해 주세요.' }) : later(fake(a, p, 'admin')); }
 };
@@ -129,10 +136,11 @@ var cfg = (window.SEISEKI_CONFIG || {}).API_URL || {};
 var session = demoSession;
 var tb = document.getElementById('tb'), cols = document.getElementById('cols');
 function link(label, qs) { return '<a href="?' + qs + '">' + label + '</a>'; }
-tb.innerHTML = 'HubQna 테스트 · ' + link('학생(데모)', 'view=student') + link('강사(데모)', 'view=admin') + link('나란히', 'view=both') + link('오류화면', 'view=both&down') + link('초기화', 'view=' + VIEW + '&reset') + link('충돌', 'view=' + VIEW + '&clash') + link('실서버', 'view=' + VIEW + '&live') + '<span id="pend"></span>';
+tb.innerHTML = 'HubQna 테스트 · ' + link('라이트', 'view=' + VIEW + '&theme=light') + link('다크', 'view=' + VIEW + '&theme=dark') + link('시트+사진', 'view=student&sheet&photo') + link('학생(데모)', 'view=student') + link('강사(데모)', 'view=admin') + link('나란히', 'view=both') + link('오류화면', 'view=both&down') + link('초기화', 'view=' + VIEW + '&reset') + link('충돌', 'view=' + VIEW + '&clash') + link('실서버', 'view=' + VIEW + '&live') + '<span id="pend"></span>';
 function pendTxt(n) { document.getElementById('pend').textContent = ' · 대기 뱃지: ' + n; }
 function addCol(id, title) { var c = document.createElement('div'); c.innerHTML = '<div class="colh">' + title + '</div><div id="' + id + '"></div>'; cols.appendChild(c); return document.getElementById(id); }
 if (VIEW === 'both') cols.classList.add('both');
+if (Q.get('w')) cols.style.cssText = 'width:' + Q.get('w') + 'px;overflow-x:auto';
 function run() {
   if (VIEW === 'student' || VIEW === 'both') HubQna.mount(addCol('stu', '학생용'), { session: session });
   if (VIEW === 'admin' || VIEW === 'both') HubQnaAdmin.mount(addCol('adm', '강사용'), { session: session, onPending: pendTxt });
@@ -147,6 +155,24 @@ if (LIVE) {
   }
 }
 run();
+/* 렌더 확인용: ?open 첫 카드 펼치기 · ?sheet 질문 시트 열기 · ?photo 시트에 가짜 사진 1장 넣기 · ?pub 시트의 공개 켜기 */
+setTimeout(function () {
+  if (Q.get('tab') === 'pub') { var tp = document.querySelector('[data-t="pub"]'); if (tp) tp.click(); }
+  if (Q.has('open')) document.querySelectorAll('.q-card .q-ch').forEach(function (b, i) { if (i < 1) b.click(); });
+  if (!Q.has('sheet')) return;
+  var ask = document.querySelector('[data-act="ask"]'); if (ask) ask.click();
+  var ov = document.querySelector('.q-sheet-ov'); if (!ov) return;
+  var sj = ov.querySelector('[data-s="sj"][data-v="경제"]'); if (sj) sj.click();
+  ov.querySelector('#q-ti').value = '그래프에서 균형점이 어떻게 움직여요?';
+  if (Q.has('pub')) ov.querySelector('#q-pub').click();
+  if (Q.has('send')) { var bo = ov.querySelector('#q-bo'); bo.value = '교재 52쪽 7번이요.'; ov.querySelector('[data-s="send"]').click(); setTimeout(function () { var g = ov.querySelector('[data-s="go"]'); if (g) g.click(); }, 300); return; }
+  if (Q.has('photo')) {
+    var cv = document.createElement('canvas'); cv.width = 400; cv.height = 300; var cx = cv.getContext('2d');
+    var g = cx.createLinearGradient(0, 0, 400, 300); g.addColorStop(0, '#7466FF'); g.addColorStop(1, '#7DF0CF'); cx.fillStyle = g; cx.fillRect(0, 0, 400, 300);
+    cx.fillStyle = '#fff'; cx.font = 'bold 34px sans-serif'; cx.fillText('문제 사진', 120, 160);
+    cv.toBlob(function (bl) { var dt = new DataTransfer(); dt.items.add(new File([bl], 'q.jpg', { type: 'image/jpeg' })); var inp = ov.querySelector('input[type=file][multiple]'); inp.files = dt.files; inp.dispatchEvent(new Event('change')); }, 'image/jpeg', 0.8);
+  }
+}, 900);
 if (Q.has('unmount')) setTimeout(function () { HubQna.unmount(); HubQnaAdmin.unmount(); cols.innerHTML = '<p style="padding:20px">unmount 됨 — 1초 뒤 다시 mount</p>'; setTimeout(function () { cols.innerHTML = ''; run(); }, 1000); }, 1500);
 </script>
 </body>

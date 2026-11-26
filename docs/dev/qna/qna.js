@@ -9,7 +9,8 @@
  *   HubQnaAdmin.refresh()                    목록 새로 불러오기
  *
  * session = HubSession(hub-session.js) 모양. 응답은 {ok:true,data} | {ok:false,error}. 오류 문구는 그대로 보여 줌.
- * 허브가 HubMascots(assets/mascots.js)를 불러 두었으면 3D 캐릭터를 쓰고, 없으면 캐릭터 없이 글자만 보임.
+ * 디자인(2026-11-26): 색·글꼴은 docs/dev/assets/ds.css 변수만(다크 = <html data-theme="dark">). 캐릭터는 학생 화면의 빈 화면·오류·완료 자리에만 —
+ * window.HubMongle(+session.char() · hub:char 이벤트)이 있으면 내 몽글이, 없으면 HubMascots 대체 그림, 그것도 없으면 글자만. 강사 화면은 캐릭터 없음.
  * 학생에게는 다른 학생의 실제 이름·번호를 절대 안 보임(서버가 가린 who 만 씀). */
 (function () {
   'use strict';
@@ -30,7 +31,34 @@
   }
   function fmtDay(s) { var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || '')); return m ? (+m[2]) + '/' + (+m[3]) : ''; }
   function mascot(id, size, cls) { try { return window.HubMascots ? window.HubMascots.svg(id, size, cls) : ''; } catch (e) { return ''; } }
-  function ensureMascots() { try { if (window.HubMascots) window.HubMascots.mount(); } catch (e) { /* 캐릭터 없이 */ } }
+  function ensureMascots() { try { if (window.HubMascots) window.HubMascots.mount(); } catch (e) { /* 캐릭터 없이 */ } try { if (window.HubMongle && window.HubMongle.mount) window.HubMongle.mount(); } catch (e) { /* */ } }
+  /* 내 몽글이 자리: <span class="q-chr" data-chs data-che data-chf> — hub:char 가 오면 다시 채움 */
+  var CHAR = { st: null, name: '' };
+  function charInner(size, expr, fb) {
+    var M = window.HubMongle;
+    if (M && (M.svg || M.avatar)) {
+      try {
+        var st = CHAR.st ? CHAR.st.state : null, show = !CHAR.st || CHAR.st.show !== false;
+        if (!show && M.avatar) return M.avatar(st, size, { show: false, initial: CHAR.name.charAt(0) || '나', expr: expr || 'base' });
+        return M.svg(st, size, { expr: expr || 'base', anim: true, shadow: true });
+      } catch (e) { /* 대체 그림으로 */ }
+    }
+    return fb ? mascot(fb, size, 'hm-float') : '';
+  }
+  function charSlot(size, expr, fb) {
+    var inner = charInner(size, expr, fb); if (!inner) return '';
+    return '<span class="q-chr" aria-hidden="true" data-chs="' + size + '" data-che="' + esc(expr || 'base') + '" data-chf="' + esc(fb || '') + '">' + inner + '</span>';
+  }
+  function refreshChars(R) { $$('.q-chr', R).forEach(function (el) { el.innerHTML = charInner(+el.getAttribute('data-chs'), el.getAttribute('data-che'), el.getAttribute('data-chf')); }); }
+  /* 작은 선 아이콘 (currentColor) */
+  function ico(d, w) { return '<svg class="q-ic" width="' + (w || 18) + '" height="' + (w || 18) + '" viewBox="0 0 20 20" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; }
+  var IC = {
+    cam: ico('<path d="M3 7.2c0-1 .8-1.8 1.8-1.8h1.7L8 3.6h4l1.5 1.8h1.7c1 0 1.8.8 1.8 1.8v7.4c0 1-.8 1.8-1.8 1.8H4.8c-1 0-1.8-.8-1.8-1.8z"/><circle cx="10" cy="10.6" r="3"/>'),
+    img: ico('<rect x="3" y="3.5" width="14" height="13" rx="2.6"/><circle cx="7.4" cy="8" r="1.4"/><path d="M3.6 14.6l4-3.8 3 2.6 2.2-2 3.6 3.2"/>'),
+    lock: ico('<rect x="4.5" y="9" width="11" height="8" rx="2.2"/><path d="M7 9V6.8a3 3 0 0 1 6 0V9"/>', 13),
+    plus: ico('<path d="M10 4.5v11M4.5 10h11"/>', 26),
+    check: ico('<path d="M5 10.4l3.2 3.2L15 6.6"/>', 16)
+  };
   function errText(r) { return (r && r.error) || (r && r.needLogin ? '다시 로그인해 주세요.' : '잠시 뒤에 다시 해 주세요.'); }
   /** 서버 호출: 던지거나 이상한 응답이어도 항상 {ok,…} 로 */
   function safeCall(fn, action, payload) {
@@ -106,8 +134,8 @@
     var id = 'qph' + (++uid), items = [], pending = 0, disabled = false, msgT = 0, mx = function () { return typeof max === 'function' ? max() : max; };
     host.innerHTML =
       '<div class="q-thumbs"></div>' +
-      '<div class="q-pkb"><label class="q-btn q-soft q-sm" for="' + id + 'c">📷 사진 찍기</label><input id="' + id + 'c" class="q-vh" type="file" accept="image/*" capture="environment">' +
-      '<label class="q-btn q-soft q-sm" for="' + id + 'a">🖼 앨범에서 고르기</label><input id="' + id + 'a" class="q-vh" type="file" accept="image/*" multiple>' +
+      '<div class="q-pkb"><label class="q-btn q-soft q-sm" for="' + id + 'c">' + IC.cam + '사진 찍기</label><input id="' + id + 'c" class="q-vh" type="file" accept="image/*" capture="environment">' +
+      '<label class="q-btn q-soft q-sm" for="' + id + 'a">' + IC.img + '앨범에서 고르기</label><input id="' + id + 'a" class="q-vh" type="file" accept="image/*" multiple>' +
       '<span class="q-cnt"></span></div><p class="q-msg" role="status"></p>';
     var th = $('.q-thumbs', host), cnt = $('.q-cnt', host), msg = $('.q-msg', host), ins = $$('input', host), lbs = $$('label', host);
     function say(t, bad) { msg.textContent = t || ''; msg.className = 'q-msg' + (bad ? ' err' : ''); clearTimeout(msgT); if (t && bad) msgT = setTimeout(function () { say(''); }, 5000); }
@@ -204,12 +232,13 @@
   }
   function toast(I, text, bad) {
     var t = $('.q-toast', I.root); if (!t) return;
-    t.textContent = text; t.className = 'q-toast' + (bad ? ' err' : ''); t.hidden = false;
+    t.innerHTML = (!bad && I.char ? charSlot(34, 'happy', 'm-check-happy') : '') + '<span>' + esc(text) + '</span>'; t.className = 'q-toast' + (bad ? ' err' : ''); t.hidden = false;
     clearTimeout(I.toastT); I.toastT = setTimeout(function () { t.hidden = true; }, 4500);
   }
   var SKEL = '<div class="q-skel"><i></i><i></i><i></i></div>';
-  function stateBlock(mas, id, title, sub, btn) {
-    return '<div class="q-state">' + mascot(id, 84, mas) + '<b>' + esc(title) + '</b>' + (sub ? '<p>' + esc(sub) + '</p>' : '') + (btn || '') + '</div>';
+  /** 빈 화면·오류 칸. fb = 몽글이가 없을 때 쓸 HubMascots id, 빈 값이면 캐릭터 없음(강사 화면) */
+  function stateBlock(expr, fb, title, sub, btn) {
+    return '<div class="q-state">' + (fb ? charSlot(96, expr, fb) : '') + '<b>' + esc(title) + '</b>' + (sub ? '<p>' + esc(sub) + '</p>' : '') + (btn || '') + '</div>';
   }
 
   /* =====================================================================
@@ -218,8 +247,8 @@
   var ST = null;
 
   function stuShell() {
-    return '<header class="q-head"><div><h1 class="q-title">QnA</h1><p class="q-subt">궁금한 건 선생님께 물어보세요</p></div><button type="button" class="q-link" data-act="reload">새로고침</button></header>' +
-      '<button type="button" class="q-hero" data-act="ask">' + mascot('m-pencil-happy', 76, 'hm-float') + '<span class="q-herot"><b>질문하기</b><small>모르는 문제를 사진으로 찍어 물어봐요</small></span><span class="q-go" aria-hidden="true">›</span></button>' +
+    return '<header class="q-head"><div><h1 class="q-title">질문</h1><p class="q-subt">궁금한 건 선생님께 물어보세요</p></div><button type="button" class="q-link" data-act="reload">새로고침</button></header>' +
+      '<button type="button" class="q-hero" data-act="ask"><span class="q-plus" aria-hidden="true">' + IC.plus + '</span><span class="q-herot"><b>질문하기</b><small>모르는 문제를 사진으로 찍어 물어봐요</small></span><span class="q-go" aria-hidden="true">›</span></button>' +
       '<div class="q-toast" role="status" aria-live="polite" hidden></div>' +
       '<div class="q-seg" role="tablist" aria-label="질문 보기"><button type="button" role="tab" data-t="mine">내 질문 <em></em></button><button type="button" role="tab" data-t="pub">모두의 질문 <em></em></button></div>' +
       '<div class="q-chips" data-chips hidden></div>' +
@@ -231,8 +260,14 @@
     stuUnmount();
     o = o || {};
     ensureMascots();
-    var I = { alive: true, root: rootEl, session: o.session, tab: 'mine', filter: '', data: null, loading: true, err: '', open: {}, toastT: 0, boxes: {}, sheet: null };
+    var I = { alive: true, root: rootEl, session: o.session, tab: 'mine', filter: '', data: null, loading: true, err: '', open: {}, toastT: 0, boxes: {}, sheet: null, char: true };
     ST = I;
+    CHAR.st = null; CHAR.name = o.session && o.session.name ? String(o.session.name) : '';
+    I.onChar = function (e) { var d = e && e.detail; if (!d || !I.alive) return; CHAR.st = { state: d.state || (CHAR.st && CHAR.st.state) || null, show: d.show !== undefined ? d.show : (CHAR.st ? CHAR.st.show : true) }; refreshChars(I.root); };
+    window.addEventListener('hub:char', I.onChar);
+    if (o.session && typeof o.session.char === 'function') {
+      try { Promise.resolve(o.session.char()).then(function (r) { if (!I.alive) return; var d = r && r.data ? r.data : r; if (d && (d.state || d.show !== undefined)) { CHAR.st = { state: d.state || null, show: d.show }; refreshChars(I.root); } }, function () { /* 기본 몽글이 */ }); } catch (e) { /* */ }
+    }
     I.loader = photoLoader(function (id) { return safeCall(function (a, p) { return I.session.call(a, p); }, 'qnaPhoto', { id: id }); });
     rootEl.classList.add('qna'); rootEl.innerHTML = stuShell();
     I.onClick = function (e) { stuClick(I, e); };
@@ -243,6 +278,7 @@
     var I = ST; if (!I) return;
     I.alive = false; clearTimeout(I.toastT);
     I.root.removeEventListener('click', I.onClick);
+    window.removeEventListener('hub:char', I.onChar);
     if (I.sheet) removeOverlay(I.sheet);
     overlays.slice().forEach(removeOverlay);
     I.root.innerHTML = ''; I.root.classList.remove('qna');
@@ -267,12 +303,12 @@
   function stuCard(I, q, kind) {
     var key = kind + ':' + q.id, open = !!I.open[key], answered = q.status === '답변';
     var top = sjChip(q.subject);
-    if (kind === 'mine') top += '<span class="q-pill ' + (answered ? 'ok' : 'wait') + '">' + (answered ? '답변 완료' : '답변 대기') + '</span><span class="q-pill ' + (q.public ? 'pub' : 'priv') + '">' + (q.public ? '공개' : '🔒 비공개') + '</span>';
+    if (kind === 'mine') top += '<span class="q-pill ' + (answered ? 'ok' : 'wait') + '">' + (answered ? '답변 완료' : '답변 대기') + '</span><span class="q-pill ' + (q.public ? 'pub' : 'priv') + '">' + (q.public ? '공개' : IC.lock + '비공개') + '</span>';
     else top += '<span class="q-who">' + esc(q.mine ? '내 질문' : (q.who || '친구')) + '</span>';
     var meta = kind === 'mine' ? esc(fmtAt(q.at)) : esc(fmtDay(q.answerAt || q.at)) + ' 답변';
     var ans = answered
-      ? '<div class="q-ans"><span class="q-ansl">' + mascot('m-check-happy', 22, '') + ' 선생님 답변' + (q.answerAt ? '<small>' + esc(fmtAt(q.answerAt)) + '</small>' : '') + '</span><p class="q-text">' + esc(q.answer) + '</p><div class="q-phs-row" data-ph="a"></div></div>'
-      : '<div class="q-ans wait"><p>' + mascot('m-hourglass', 22, '') + ' 선생님이 확인하는 중이에요. 답변이 달리면 여기에 보여요.</p></div>';
+      ? '<div class="q-ans"><span class="q-ansl"><i class="q-ansi">' + IC.check + '</i>선생님 답변' + (q.answerAt ? '<small>' + esc(fmtAt(q.answerAt)) + '</small>' : '') + '</span><p class="q-text">' + esc(q.answer) + '</p><div class="q-phs-row" data-ph="a"></div></div>'
+      : '<div class="q-ans wait"><p><i class="q-dots" aria-hidden="true"><b></b><b></b><b></b></i>선생님이 확인하는 중이에요. 답변이 달리면 여기에 보여요.</p></div>';
     return '<article class="q-card' + (open ? ' open' : '') + '" data-key="' + esc(key) + '">' +
       '<button type="button" class="q-ch" aria-expanded="' + open + '"><span class="q-top">' + top + '</span><b class="q-t">' + esc(q.title) + '</b><span class="q-m">' + meta + '</span>' + CHEV + '</button>' +
       '<div class="q-cb"' + (open ? '' : ' hidden') + '><p class="q-text">' + esc(q.body) + '</p><div class="q-phs-row" data-ph="q"></div>' + ans +
@@ -291,13 +327,13 @@
     chips.hidden = I.tab !== 'pub' || !d;
     if (!chips.hidden) chips.innerHTML = ['전체'].concat(SUBJECTS).map(function (s) { var v = s === '전체' ? '' : s; return '<button type="button" class="q-chip" data-f="' + esc(v) + '" aria-pressed="' + (I.filter === v) + '">' + esc(s) + '</button>'; }).join('');
     var list = $('[data-list]', R), h = '', arr = [];
-    if (I.loading) h = SKEL + '<p class="q-loadmsg">' + mascot('m-hourglass', 28, 'hm-wiggle') + ' 불러오는 중…</p>';
-    else if (!d) h = stateBlock('', 'm-cloud', '불러오지 못했어요', I.err, '<button type="button" class="q-btn" data-act="reload">다시 불러오기</button>');
+    if (I.loading) h = SKEL + '<p class="q-loadmsg">불러오는 중…</p>';
+    else if (!d) h = stateBlock('base', 'm-cloud', '불러오지 못했어요', I.err, '<button type="button" class="q-btn" data-act="reload">다시 불러오기</button>');
     else {
       arr = I.tab === 'mine' ? d.mine : d.pub.filter(function (q) { return !I.filter || q.subject === I.filter; });
       if (!arr.length) h = I.tab === 'mine'
-        ? stateBlock('hm-float', 'm-cactus', '아직 질문이 없어요', '모르는 게 생기면 위의 「질문하기」로 물어보세요.')
-        : stateBlock('hm-float', 'm-cactus', I.filter ? I.filter + ' 질문이 아직 없어요' : '아직 공개된 질문이 없어요', '선생님이 답한 공개 질문이 여기에 모여요.');
+        ? stateBlock('base', 'm-cactus', '아직 질문이 없어요', '모르는 게 생기면 위의 「질문하기」로 물어보세요.')
+        : stateBlock('base', 'm-cactus', I.filter ? I.filter + ' 질문이 아직 없어요' : '아직 공개된 질문이 없어요', '선생님이 답한 공개 질문이 여기에 모여요.');
       else h = arr.map(function (q) { return stuCard(I, q, I.tab); }).join('');
     }
     list.innerHTML = h; I.boxes = {};
@@ -343,7 +379,7 @@
     ov.className = 'qna qna-ov q-sheet-ov'; ov.setAttribute('role', 'dialog'); ov.setAttribute('aria-modal', 'true'); ov.setAttribute('aria-label', '질문하기');
     ov.innerHTML =
       '<div class="q-sheet"><div class="q-grip" aria-hidden="true"></div>' +
-      '<div class="q-sh"><h2>' + mascot('m-pencil', 34, '') + ' 질문하기</h2><button type="button" class="q-link" data-s="close">닫기</button></div>' +
+      '<div class="q-sh"><h2>질문하기</h2><button type="button" class="q-link" data-s="close">닫기</button></div>' +
       '<div class="q-sb">' +
       '<label class="q-lb">과목</label><div class="q-chips tight">' + SUBJECTS.map(function (s) { return '<button type="button" class="q-chip" data-s="sj" data-v="' + esc(s) + '" aria-pressed="false"><i class="q-dot" style="background:' + SJ_COLOR[s] + '"></i>' + esc(s) + '</button>'; }).join('') + '</div>' +
       '<label class="q-lb" for="q-ti">제목</label><input id="q-ti" class="q-in" type="text" maxlength="' + MAX_TITLE + '" placeholder="어떤 게 궁금해요?" autocomplete="off" enterkeyhint="next">' +
@@ -367,7 +403,7 @@
       if (F.err) h += '<p class="q-msg err" role="alert">' + esc(F.err) + '</p>';
       if (F.mode === 'edit') h += '<button type="button" class="q-btn q-block" data-s="send">질문 올리기</button>';
       else if (F.mode === 'confirm') h += '<p class="q-cf"><b>' + (F.pub ? '공개로' : '비공개로') + ' 올릴까요?</b> ' + (F.pub ? '답변이 달리면 다른 친구도 볼 수 있어요 (이름은 가려져요).' : '선생님만 볼 수 있어요.') + ' 올린 뒤에는 고칠 수 없어요.</p><div class="q-two"><button type="button" class="q-btn q-soft" data-s="back">다시 볼래요</button><button type="button" class="q-btn" data-s="go">올리기</button></div>';
-      else if (F.mode === 'sending') h += '<p class="q-sending">' + mascot('m-hourglass', 40, 'hm-wiggle') + ' 올리는 중이에요…</p>';
+      else if (F.mode === 'sending') h += '<p class="q-sending"><i class="q-spin" aria-hidden="true"></i>올리는 중이에요…</p>';
       else if (F.mode === 'discard') h += '<p class="q-cf"><b>쓰던 내용이 사라져요.</b> 그래도 닫을까요?</p><div class="q-two"><button type="button" class="q-btn q-soft" data-s="keep">계속 쓸래요</button><button type="button" class="q-btn q-danger2" data-s="drop">닫기</button></div>';
       foot.innerHTML = h;
     }
@@ -468,7 +504,7 @@
     var answered = q.status === '답변', nm = adName(q), cd = adCode(q), cl = adCls(q);
     var who = '<b class="q-nm">' + esc(nm || '(이름 없음)') + '</b>' + (cd ? ' <span class="q-code">번호 ' + esc(cd.slice(-4)) + '</span>' : '') + (cl ? ' · ' + esc(cl) : '') + ' · ' + esc(fmtAt(q.at));
     return '<article class="q-card q-ac' + (open ? ' open' : '') + (answered ? '' : ' pend') + '" data-id="' + esc(q.id) + '">' +
-      '<button type="button" class="q-ch" aria-expanded="' + open + '"><span class="q-top">' + sjChip(q.subject) + '<span class="q-pill ' + (answered ? 'ok' : 'wait') + '">' + (answered ? '답변 완료' : '답변 대기') + '</span><span class="q-pill ' + (q.public ? 'pub' : 'priv') + '">' + (q.public ? '공개' : '🔒 비공개') + '</span></span>' +
+      '<button type="button" class="q-ch" aria-expanded="' + open + '"><span class="q-top">' + sjChip(q.subject) + '<span class="q-pill ' + (answered ? 'ok' : 'wait') + '">' + (answered ? '답변 완료' : '답변 대기') + '</span><span class="q-pill ' + (q.public ? 'pub' : 'priv') + '">' + (q.public ? '공개' : IC.lock + '비공개') + '</span></span>' +
       '<b class="q-t">' + esc(q.title) + '</b><span class="q-m">' + who + '</span>' + CHEV + '</button>' +
       '<div class="q-cb"' + (open ? '' : ' hidden') + '><p class="q-text">' + esc(q.body) + '</p><div class="q-phs-row" data-ph="q"></div>' +
       '<div class="q-aform"><label class="q-lb" for="q-an-' + esc(q.id) + '">' + (answered ? '선생님 답변 (수정할 수 있어요)' : '선생님 답변') + (q.answerAt ? ' <span class="q-opt">' + esc(fmtAt(q.answerAt)) + '</span>' : '') + '</label>' +
@@ -529,10 +565,10 @@
   }
   function adDrawList(I) {
     var list = $('[data-list]', I.root);
-    if (I.loading) { list.innerHTML = SKEL + '<p class="q-loadmsg">' + mascot('m-hourglass', 28, 'hm-wiggle') + ' 불러오는 중…</p>'; return; }
-    if (!I.list) { list.innerHTML = stateBlock('', 'm-cloud', '불러오지 못했어요', I.err, '<button type="button" class="q-btn" data-act="reload">다시 불러오기</button>'); return; }
+    if (I.loading) { list.innerHTML = SKEL + '<p class="q-loadmsg">불러오는 중…</p>'; return; }
+    if (!I.list) { list.innerHTML = stateBlock('', '', '불러오지 못했어요', I.err, '<button type="button" class="q-btn" data-act="reload">다시 불러오기</button>'); return; }
     var a = adFiltered(I);
-    if (!a.length) { list.innerHTML = stateBlock('hm-float', 'm-cactus', I.q || I.sj || I.st ? '조건에 맞는 질문이 없어요' : '아직 질문이 없어요', I.st === '대기' && !I.q && !I.sj ? '답변을 기다리는 질문이 없어요. 👍' : ''); return; }
+    if (!a.length) { list.innerHTML = stateBlock('', '', I.q || I.sj || I.st ? '조건에 맞는 질문이 없어요' : '아직 질문이 없어요', I.st === '대기' && !I.q && !I.sj ? '답변을 기다리는 질문이 없어요.' : ''); return; }
     list.innerHTML = '';
     a.forEach(function (q) { list.appendChild(I.cards[q.id].el); });
   }

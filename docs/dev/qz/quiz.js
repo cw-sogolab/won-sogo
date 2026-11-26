@@ -1,7 +1,35 @@
 (function(){
 "use strict";
 const D = window.KITAKU_DATA;
-const mas = (id, size=64, cls="hm-float") => window.HubMascots ? HubMascots.svg(id, size, cls) : "";   // 허브의 3D 캐릭터 (2026-11-24)
+const mas = (id, size=64, cls="hm-float") => window.HubMascots ? HubMascots.svg(id, size, cls) : "";   // 허브의 옛 캐릭터 (2026-11-24) — 몽글이(HubMongle)가 없을 때만 대신 씀
+/* ───────── 몽글이 · J 도형 (2026-11-26 최종 디자인) ─────────
+   몽글이 = window.HubMongle (assets/mongle.js, 늦게 올 수 있음). 내 캐릭터 상태 = HubSession.char() · hub:char 이벤트.
+   J(보상 순간) 도형: 핑크 톱니 배지 · 왕관 · 집 아이콘 — 색은 전부 quiz.css 의 클래스(ds.css 변수)로 칠함. */
+const HM = () => window.HubMongle || null;
+let MYCH = { state:null, show:true };
+function mg(state, size, o={}){
+  const M=HM(), fb = o.fb!=null ? o.fb : "";
+  if(!M) return o.show===false ? `<span class="ini">${esc(o.initial||"")}</span>` : fb;
+  try{
+    if(o.show===false) return M.avatar ? M.avatar(state||null, size, {show:false, initial:o.initial||""}) : `<span class="ini">${esc(o.initial||"")}</span>`;
+    return M.svg(state||null, size, {expr:o.expr||"base", anim:o.anim!==false, shadow:!!o.shadow});
+  }catch(e){ return fb; }
+}
+function myIni(){ return String((typeof S!=="undefined" && S && S.name) || (typeof me!=="undefined" && me && me.nm) || "").trim().charAt(0); }
+function myMgInner(size, expr, fbId){ return MYCH.show===false ? mg(null, size, {show:false, initial:myIni()}) : mg(MYCH.state, size, {expr, fb: fbId? mas(fbId, size, "") : ""}); }
+function myMg(size, expr="base", fbId=""){ return `<span class="mg" data-mych="${size}|${expr}|${fbId}">${myMgInner(size, expr, fbId)}</span>`; }
+function reCh(){ document.querySelectorAll("#app [data-mych]").forEach(el=>{ const [s,e,f]=el.dataset.mych.split("|"); el.innerHTML=myMgInner(+s, e, f); }); }
+function loadMyChar(){
+  const H=window.HubSession; if(!H || typeof H.char!=="function" || (H.isAdmin && H.isAdmin())) return;
+  try{ Promise.resolve(H.char()).then(r=>{ const d = r && r.data ? r.data : r; if(d && (d.state || d.show!=null)){ MYCH={state:d.state||null, show:d.show!==false}; reCh(); } }, ()=>{}); }catch(e){}
+}
+window.addEventListener("hub:char", e=>{ const d=(e && e.detail)||{}; MYCH={state:d.state||MYCH.state, show:d.show!==false}; reCh(); });
+const GEAR_D = "M50 8A11.5 11.5 0 0 1 71 13.6A11.5 11.5 0 0 1 86.4 29A11.5 11.5 0 0 1 92 50A11.5 11.5 0 0 1 86.4 71A11.5 11.5 0 0 1 71 86.4A11.5 11.5 0 0 1 50 92A11.5 11.5 0 0 1 29 86.4A11.5 11.5 0 0 1 13.6 71A11.5 11.5 0 0 1 8 50A11.5 11.5 0 0 1 13.6 29A11.5 11.5 0 0 1 29 13.6A11.5 11.5 0 0 1 50 8Z";   // 시안 #scal (viewBox 100)
+const gearSVG = (txt, fs=17) => `<svg class="gear" viewBox="0 0 72 72" role="img" aria-label="${esc(txt)}"><g class="gpop"><g class="spin"><path class="gf" transform="scale(.72)" d="${GEAR_D}"/></g><text x="36" y="42" text-anchor="middle" font-size="${fs}" transform="rotate(-10 36 36)">${esc(txt)}</text></g></svg>`;
+const CROWN_SVG = `<svg class="crown" viewBox="0 0 40 30" aria-hidden="true"><path class="cw" d="M5 27L3 9l9.5 7.5L20 3l7.5 13.5L37 9l-2 18z"/><circle class="cd" cx="20" cy="19" r="3.4"/></svg>`;
+const HOUSE_SVG = `<svg class="ichouse" viewBox="0 0 24 24" aria-hidden="true"><rect class="base" x="5.5" y="11.4" width="13" height="10.6" rx="3"/><rect class="wall" x="5.5" y="10" width="13" height="10.8" rx="3"/><path class="roof" d="M4 11.2L12 4.2L20 11.2Z" style="stroke:var(--peach);stroke-width:2.6;stroke-linejoin:round"/><rect class="door" x="10.2" y="14.2" width="3.6" height="6.6" rx="1.5"/></svg>`;
+const J_AST = (x, y, s, cls="") => `<g transform="translate(${x} ${y}) scale(${(s/24).toFixed(4)})"><path class="ast ${cls}" d="M12 3v18M4.2 7.5l15.6 9M19.8 7.5l-15.6 9" stroke-width="4" stroke-linecap="round" fill="none"/></g>`;
+const J_GEAR = (x, y, rot, s, inner) => `<g transform="translate(${x} ${y}) rotate(${rot})"><g class="wob"><path class="fill-p" transform="translate(${-s/2} ${-s/2}) scale(${s/100})" d="${GEAR_D}"/>${inner}</g></g>`;
 /* ───────── 개발판 (2026-10-16) ─────────
    cw-sogolab.github.io/kitaku/dev/ 에서 열리면 개발판: 화면 위 빨간 띠, 기록 시트로 안 보냄, 폰 저장 공간을 본판과 따로 씀(kitaku-dev.*).
    새 기능은 CONFIG에서 DEV일 때만 켜서 먼저 dev/ 에 올려 보고, 확인되면 본판에도 켬. */
@@ -78,7 +106,7 @@ const WSTAT = (D.wstat || []).map(x=>({...x, ko: x.kind==="most" ? x.q+" 나라"
 const WM = D.wmap, WPATH = Object.fromEntries((WM?WM.paths:[]).map(p=>[p.id,p]));
 const GW = {S:6, A:4, B:2.5, "C*":1.5, C:1.2, N:1};   // C* = C 등급 중 장기반복도≥4 (세계 연표는 일반 C·N 제외)
 const SW = {3:4, 2:2.5, 1:1.2, 0:1};
-const SUBJ = { geo:["지리","var(--c-geo)"], his:["역사","var(--c-his)"], pol:["정치","var(--c-pol)"], eco:["경제","var(--c-eco)"], soc:["현대사회","var(--c-soc)"], all:["통합","#2E5A4C"], con:["개념","#6B4FA0"] };
+const SUBJ = { geo:["지리","var(--c-geo)"], his:["역사","var(--c-his)"], pol:["정치","var(--c-pol)"], eco:["경제","var(--c-eco)"], soc:["현대사회","var(--c-soc)"], all:["통합","var(--ink)"], con:["개념","var(--pt-d)"] };
 const FIELD2SUBJ = {"정치":"pol","경제":"eco","현대사회":"soc","역사":"his","지리":"geo"};
 const conW = x => 1;
 
@@ -92,7 +120,7 @@ const SETS = [
       {label:"세계 연표", share:.20, sets:["w-pol","w-eco","w-soc","w-his","w-geo"]},
       {label:"개념", share:.30, sets:["c-pol","c-eco","c-soc","c-his","c-geo"]}
     ], pool:()=>[...PREFS, ...JPH, ...(CONFIG.worldChrono? WORLD : []), ...LAND, ...CON, ...CTRY, ...CLIM, ...WLAND, ...WSTAT]},
-  // 일본·세계 전체 통합 — 퇴실 퀴즈용, 강사 화면에서만 보임
+  // 일본·세계 전체 통합 — 퇴근 미션용, 강사 화면에서만 보임
   {id:"mix-jp", group:"통합본", subj:"geo", name:"일본 전체 통합", teacherOnly:true, composite:[
       {label:"일본 지리", share:.6, sets:["jp-region","jp-pref","jp-feature","jp-capital","jp-land"], wts:JPGEO_W},
       {label:"일본 연표", share:.4, sets:["jp-his"]} ], pool:()=>[...PREFS, ...LAND, ...JPH]},
@@ -790,7 +818,7 @@ if(AUTH && !nOpts().includes(prac.n)) prac.n = 10;
 let clockTimer = null, advTimer = null, lockTimer = null;
 /* ── 새 버전 자동 새로고침 (2026-10-21) ──
    서버의 index.html 속 APP_V 가 지금 화면의 APP_V 와 다르면 새 버전이 나온 것.
-   첫 화면(수업 입장·혼자 연습)에 있으면 바로 새로고침, 퀴즈·퇴실증·결과·랭킹·강사 화면이면 첫 화면으로 돌아갈 때 새로고침.
+   첫 화면(수업 입장·혼자 연습)에 있으면 바로 새로고침, 퀴즈·퇴근증·결과·랭킹·강사 화면이면 첫 화면으로 돌아갈 때 새로고침.
    확인 시점: 화면 켤 때(탭으로 돌아올 때) + 열어 둔 동안 5분마다. 배포할 때마다 APP_V 를 바꿀 것. */
 const APP_V = "2026-11-22a";
 let newV = null;
@@ -862,10 +890,10 @@ function renderEntry(){
   const hk = AUTH ? (isMember()? me.id : null) : entry.name, hist = hk ? store.get("hist."+hk+"."+set.id, []) : [];
   return `<div class="wrap">
     <section class="card setcard">
-      <div class="stkm">${mas("m-rocket-happy",84)}</div>
-      <span class="eyebrow">오늘의 퇴실 퀴즈 · ${korDateShort()}</span>
+      <div class="stkm">${myMg(84,"happy","m-rocket-happy")}</div>
+      <span class="eyebrow">오늘의 퇴근 미션 · ${korDateShort()}</span>
       <h1>${esc(set.name)}</h1>
-      <div class="meta"><span><b>${preset.n}</b>문항</span><span>한 번에 다 맞혀야 퇴실</span><span>틀리면 처음부터</span></div>
+      <div class="meta"><span><b>${preset.n}</b>문항</span><span>한 번에 다 맞혀야 퇴근</span><span>틀리면 처음부터</span></div>
       <div class="chips">${clsFixed()? `<span class="clschip">${esc(preset.c)}</span>` : ""}${set.composite? set.composite.map(c=>`<span>${esc(c.chip||c.label)}</span>`).join("") : `<span>${esc(set.group)}</span>`}</div>
     </section>
     <section class="card" style="display:flex;flex-direction:column;gap:12px">
@@ -878,7 +906,7 @@ function renderEntry(){
       ${hist.length?`<div class="muted" style="font-size:13px">지난 기록: 첫 시도 ${hist[hist.length-1].first}/${hist[hist.length-1].n}</div>`:""}
     </section>
     ${startArea(false)}
-    <div class="linkrow"><button class="linkbtn" id="to-rank">🏆 퇴실 퀴즈 랭킹 →</button><button class="linkbtn" id="to-prac">집에서 혼자 연습하기 →</button></div>
+    <div class="linkrow"><button class="linkbtn" id="to-rank">퇴근 미션 랭킹 →</button><button class="linkbtn" id="to-prac">집에서 혼자 연습하기 →</button></div>
     ${AUTH && !isMember()? contactCard("원외생이라면 수업 문의는 여기로") : ""}
   </div>`;
 }
@@ -949,7 +977,7 @@ function startArea(practice){
   if(!AUTH && entry.confirm && !msg) return `<section class="card confirmcard" role="alertdialog" aria-label="이름 확인">
       <span class="eyebrow">이름 확인</span>
       <div class="cf-name">${esc(entry.name)}${practice? "" : ` <span class="clschip2">${esc(entry.cls)}</span>`}</div>
-      <p class="muted" style="margin:0;font-size:13px">퇴실증·선생님 기록·랭킹에 이 이름${practice?"":"과 반"}으로 남아요. 맞나요?</p>
+      <p class="muted" style="margin:0;font-size:13px">퇴근증·선생님 기록·랭킹에 이 이름${practice?"":"과 반"}으로 남아요. 맞나요?</p>
       <div class="cf-row"><button class="btn ghost" id="cf-no">다시 쓸게요</button><button class="btn" id="cf-yes">맞아요, 시작</button></div>
     </section>`;
   return `<button class="btn" id="start" ${msg?"disabled":""}>${msg || (practice? "연습 시작" : "시작하기")}</button>`;
@@ -987,7 +1015,7 @@ function renderPractice(){
   const hasClass = preset.date===today();
   return `<div class="wrap">
     <section class="card setcard">
-      <div class="stkm">${mas("m-pencil",84)}</div>
+      <div class="stkm">${myMg(84,"base","m-pencil")}</div>
       <span class="eyebrow">혼자 연습 · ${korDateShort()}</span>
       <h1>${esc(set.name)}</h1>
       <div class="meta"><span><b>${prac.n}</b>문항</span><span>틀린 문제는 다시 나와요</span><span>기록은 「연습」으로 시트에 남아요</span></div>
@@ -1005,9 +1033,9 @@ function renderPractice(){
       ${hist.length?`<div class="muted" style="font-size:13px">이 범위 지난 기록: 첫 시도 ${hist[hist.length-1].first}/${hist[hist.length-1].n}</div>`:""}
     </section>
     ${startArea(true)}
-    <div class="linkrow"><button class="linkbtn" id="to-mine">내 기록 보기 →</button><button class="linkbtn" id="to-rank">🏆 연습 랭킹 →</button></div>
+    <div class="linkrow"><button class="linkbtn" id="to-mine">내 기록 보기 →</button><button class="linkbtn" id="to-rank">연습 랭킹 →</button></div>
     ${isGuest()? contactCard("원외생은 10문항 · 일부 범위만 풀 수 있어요. 전 범위가 궁금하다면") : ""}
-    ${hasClass?`<div style="text-align:center"><button class="linkbtn" id="to-class">오늘 퇴실 퀴즈로 →</button></div>`:`<p class="muted" style="text-align:center;font-size:12px">수업 퇴실 퀴즈는 선생님이 띄운 QR로 들어오세요.</p>`}
+    ${hasClass?`<div style="text-align:center"><button class="linkbtn" id="to-class">오늘 퇴근 미션으로 →</button></div>`:`<p class="muted" style="text-align:center;font-size:12px">수업 퇴근 미션은 선생님이 띄운 QR로 들어오세요.</p>`}
   </div>`;
 }
 function bindPractice(){
@@ -1043,12 +1071,11 @@ function loadQ(){
 
 /* ───────── 화면: 풀이 ───────── */
 function railHTML(){
-  const cur=S.queue[S.pos];
-  const stations = S.plans.map((_,i)=>`<span class="st${S.cleared.has(i)?" done":""}${i===cur&&!S.answered?" now":""}"></span>`).join("");
-  const left=S.n-S.cleared.size;
-  return `<div class="rail">
-    <div class="rail-top"><span class="home-count">집까지<b>${left}</b>문제</span><span class="lap">${!S.practice? (S.round>1? S.round+"번째 도전 · ":"")+(S.pos+1)+" / "+S.queue.length : S.round>1? S.round+"번째 바퀴 · 틀린 것만" : (S.pos+1)+" / "+S.queue.length}</span></div>
-    <div class="track"><span class="end">教室</span><div class="stations${S.n>20?" dense":""}"><span class="fill" style="width:${S.cleared.size/S.n*100}%"></span>${stations}</div><span class="end">自宅</span></div>
+  const left=S.n-S.cleared.size, p=S.cleared.size/S.n*100;
+  const lap = !S.practice? (S.round>1? S.round+"번째 도전 · ":"")+(S.pos+1)+" / "+S.queue.length : S.round>1? S.round+"번째 바퀴 · 틀린 것만" : (S.pos+1)+" / "+S.queue.length;
+  return `<div class="qprog">
+    <div class="rowx"><strong>집까지 <span class="num">${left}</span>문제</strong><span class="c">${lap}</span></div>
+    <div class="track"><div class="prog" role="progressbar" aria-label="맞힌 문제" aria-valuemin="0" aria-valuemax="${S.n}" aria-valuenow="${S.cleared.size}"><i style="width:${p}%"></i><span class="rider" style="left:clamp(15px, ${p}%, calc(100% - 15px))">${myMg(30,"base","m-rocket")}</span></div>${HOUSE_SVG}</div>
   </div>`;
 }
 function renderQuiz(){
@@ -1061,32 +1088,35 @@ function renderQuiz(){
       return `<button class="${cls}" data-i="${i}" ${S.answered?"disabled":""}><span class="t"><span class="main">${esc(c.main)}</span><span class="sub">${esc(c.sub)}</span></span>${S.answered?`<span class="yr">${c.y}</span>`:""}<span class="ord${o<0?" empty":""}">${o<0?"":o+1}</span></button>`; }).join("");
   } else {
     choices = q.choices.map((c,i)=>{ let cls="choice"+(c.year||c.mono?" year":"");
-      if(S.answered){ if(i===q.answer) cls+=" right"; else if(S.sel[0]===i) cls+=" wrong"; else cls+=" dim"; }
+      if(S.answered){ if(i===q.answer) cls+=" right"; else if(S.sel[0]===i) cls+=" wrong"+(S.just?" just":""); else cls+=" dim"; }
       return `<button class="${cls}" data-i="${i}" ${S.answered?"disabled":""}><span class="k">${keys[i]}</span><span class="t"><span class="main${c.ja?" ja":""}">${esc(c.main)}</span>${c.sub?`<span class="sub">${esc(c.sub)}</span>`:""}</span></button>`; }).join("");
   }
   const showMap = q.map || (S.answered && q.mapAfter);
   const mapIds = (S.answered && q.mapAfter) ? q.mapAfter : (q.map || []);
   let fb="";
   if(S.answered){
-    const ok=S.lastOk;
-    fb = `<div class="fb ${ok?"ok":"ng"}"><span class="head" style="display:inline-flex;align-items:center;gap:8px">${mas(ok?"m-check-happy":"m-cross",34,"")}${ok?"정답!": S.practice?"아쉬워요 — 뒤에서 다시 나와요":"아쉬워요 — 끝까지 풀고 처음부터 다시!"}</span><div>${q.explain}</div>${S.locked?`<span class="lock" id="lock">두 번 연속 틀렸어요. 해설을 읽고 <b id="lockn">5</b>초 뒤에 넘어갈 수 있어요.</span>`:""}</div>
-      <button class="btn" id="next" ${S.locked?"disabled":""}>${ok?"다음":"확인했어요"}</button>`;
+    const ok=S.lastOk, firstTry = S.round===1 && S.firstOk.has(S.queue[S.pos]);
+    fb = `<section class="fbsheet"><div class="fb ${ok?"ok":"ng"}">${ok? gearSVG("정답!") : ""}
+        <div class="t"><span class="head">${ok? (firstTry? "첫 시도에 맞혔어요" : "이번엔 맞혔어요") : S.practice?"아쉬워요 — 뒤에서 다시 나와요":"아쉬워요 — 끝까지 풀고 처음부터 다시!"}</span><div>${q.explain}</div>${S.locked?`<span class="lock" id="lock">두 번 연속 틀렸어요. 해설을 읽고 <b id="lockn">5</b>초 뒤에 넘어갈 수 있어요.</span>`:""}</div>
+        ${ok? `<div class="ch">${myMg(42,"happy","m-check-happy")}</div>` : ""}</div>
+      <button class="btn" id="next" ${S.locked?"disabled":""}>${ok?"다음":"확인했어요"}</button></section>`;
   }
   return `<div class="wrap">
     ${railHTML()}
-    <section class="card q">
+    <section class="card q qcard">
       <div class="qtag"><span class="chip" style="--c:${sc}">${esc(qs.group)}${S.set.composite&&qs.id.startsWith("w-")?" · "+esc(qs.name):""}</span><span>${esc(q.tag)}</span></div>
       <div class="prompt">${q.prompt}${q.subPrompt?`<span style="display:block;font-size:16px;margin-top:6px">${q.subPrompt}</span>`:""}${q.orderHint&&!S.answered?`<span class="muted" style="display:block;font-size:13px;font-weight:500;margin-top:6px">잘못 눌렀으면 다시 누르면 취소돼요</span>`:""}</div>
       ${showMap?`<div class="mapbox">${mapSVG(mapIds,{ring:q.ring})}</div>`:""}
       ${q.svg?`<div class="mapbox">${S.answered && q.svgAfter? q.svgAfter : q.svg}</div>`:""}${S.answered && q.svgAfter && !q.svg?`<div class="mapbox">${q.svgAfter}</div>`:""}
       <div class="choices${(showMap||q.svg) && !q.order && q.choices.every(c=>String(c.main).length<=8) ? " grid2":""}">${choices}</div>
-      ${fb}
     </section>
+    ${fb}
   </div>`;
 }
 function bindQuiz(){
   document.querySelectorAll(".choice[data-i]").forEach(b=>b.onclick=()=>choose(+b.dataset.i));
   const nx=$("#next"); if(nx) nx.onclick=advance;
+  if(S.just){ S.just=false; const fs=$(".fbsheet"); if(fs && fs.scrollIntoView){ const rm=window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches; try{ fs.scrollIntoView({block:"nearest", behavior:rm?"auto":"smooth"}); }catch(e){} } }
   if(S.locked){ let n=5; lockTimer=setInterval(()=>{ n--; const el=$("#lockn"); if(el) el.textContent=n; if(n<=0){ clearInterval(lockTimer); S.locked=false; const b=$("#next"); if(b) b.disabled=false; const l=$("#lock"); if(l) l.textContent="이제 넘어갈 수 있어요."; } },1000); }
 }
 function choose(i){
@@ -1097,7 +1127,7 @@ function choose(i){
   else S.sel=[i];
   const ok = q.order ? S.sel.every((v,k)=>v===q.correctOrder[k]) : i===q.answer;
   const idx=S.queue[S.pos];
-  S.answered=true; S.lastOk=ok;
+  S.answered=true; S.lastOk=ok; S.just=true;
   if(ok){ S.cleared.add(idx); S.streak[idx]=0; if(S.round===1) S.firstOk.add(idx); S.locked=false; }
   else { S.streak[idx]=(S.streak[idx]||0)+1; S.next.push(idx); if(S.round===1) S.firstWrong.push(idx); S.locked = S.streak[idx]>=2; }
   render();
@@ -1110,7 +1140,7 @@ function advance(){
     if(S.next.length){
       S.round++; S.lastMiss=S.next.length; S.pos=0;
       if(S.practice) S.queue=S.next;                                   // 연습: 틀린 것만 다시
-      else { S.queue=S.plans.map((_,i)=>i); S.cleared=new Set(); }      // 퇴실 퀴즈: 한 번에 전부 맞혀야 통과 → 처음부터
+      else { S.queue=S.plans.map((_,i)=>i); S.cleared=new Set(); }      // 퇴근 미션: 한 번에 전부 맞혀야 통과 → 처음부터
       S.next=[]; go("lap"); return;
     }
     finish(); return;
@@ -1126,7 +1156,7 @@ function renderLap(){
 }
 function bindLap(){ $("#go").onclick=()=>{ loadQ(); go("quiz"); }; }
 
-/* ───────── 퇴실증 ───────── */
+/* ───────── 퇴근증 ───────── */
 function finish(){
   S.done=true; S.endAt=Date.now();
   const date=today();
@@ -1166,41 +1196,43 @@ function mixLine(){
   const cnt={}; S.plans.forEach(pl=>{ const g=setById(pl.sid).group; cnt[g]=(cnt[g]||0)+1; });
   return Object.entries(cnt).map(([g,c])=>`${g} ${c}`).join(" · ") + ` · 총 ${S.n}문항`;
 }
-function renderTicket(){
+function renderTicket(){   // 퇴근증 = 보상 순간(J). 선생님이 문 앞에서 보는 정보(반·이름·도전 횟수·첫 시도·푼 문제·시간·현재 시각·오늘 암호)는 흰 카드와 기록 줄에 전부
   const date=today(), code=dailyCode(date, S.set.id);
   let growth = "첫 기록이에요";
   if(S.prev){ const d=S.firstOk.size-S.prev.first; growth = d>0? `지난번 ${S.prev.first}/${S.prev.n} → <span class="up">+${d}</span>` : d===0? `지난번과 같아요 (${S.prev.first}/${S.prev.n})` : `지난번 ${S.prev.first}/${S.prev.n}`; }
-  return `<div class="wrap">
-    <div class="mas-row">${mas("m-party-happy",92)}</div>
-    <section class="ticket" aria-label="퇴실증">
-      <div class="t-head"><span class="kind">帰宅券</span><span>No. ${String(hashStr(S.name+S.startAt)%100000).padStart(5,"0")}</span></div>
-      <div class="band" style="--c:${SUBJ[S.set.subj][1]}">
-        <span class="band-date">${korDate(new Date(S.endAt))}</span>
-        <span class="band-test">${esc(S.set.custom? S.set.name : S.set.composite? "통합본 테스트" : S.set.group+" · "+S.set.name)}</span>
-        <span class="band-mix">${esc(mixLine())}</span>
-      </div>
-      <div class="route"><div class="stn"><b>教室</b><span>교실</span></div><div class="arrow"></div><div class="stn"><b>自宅</b><span>집</span></div></div>
-      <div class="perf"></div>
-      <div class="t-grid">
-        <div class="f"><span>반</span><b>${esc(S.cls)}</b></div>
-        <div class="f"><span>이름</span><b>${esc(S.name)}</b></div>
-        <div class="f mono"><span>도전 횟수</span><b>${S.round}회</b></div>
-        <div class="f mono"><span>첫 시도 정답</span><b>${S.firstOk.size} / ${S.n}</b></div>
-        <div class="f mono"><span>푼 문제 수</span><b>${Object.values(S.tries).reduce((a,b)=>a+b,0)}문제</b></div>
-        <div class="f mono"><span>걸린 시간</span><b>${fmtDur(S.endAt-S.startAt)}</b></div>
-      </div>
-      <div class="perf"></div>
-      <div class="t-foot">
-        <div><div style="font-size:11px;font-weight:600;letter-spacing:.06em;opacity:.75">현재 시각</div><div class="clock" id="clock">${fmtTime(new Date())}</div></div>
-        <div style="text-align:right"><div style="font-size:11px;font-weight:600;letter-spacing:.06em;opacity:.75">오늘 암호</div><div class="code">${code}</div></div>
-      </div>
-    </section>
-    <div class="card" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
-      <span class="growth">${growth}</span><span class="muted" style="font-size:12px">${S.round>1? S.round+"번째 도전에 전부 통과":"첫 도전에 전부 통과!"}</span>
+  const no = String(hashStr(S.name+S.startAt)%100000).padStart(5,"0");
+  const setTxt = S.set.custom? S.set.name : S.set.composite? "통합본 테스트" : S.set.group+" · "+S.set.name;
+  const solved = Object.values(S.tries).reduce((a,b)=>a+b,0);
+  const bd = S.round>1? [S.round+"번째","도전"] : ["한 번에","통과"];
+  return `<div class="jw">
+    <div class="jtb"><span class="pill">${esc(S.cls)}</span><span class="tab">퇴근 완료</span><span class="pill">No. ${no}</span></div>
+    <div class="poster ko play">
+      <svg viewBox="0 0 340 290" role="img" aria-label="퇴근 OK!">
+        <g transform="translate(-14 -8) scale(.3125 .3154)"><path class="st-k" d="M20 14L142 40L26 74L138 104L32 134L130 166L42 192L120 222L66 246" fill="none" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/></g>
+        <rect class="cf fill-l" x="146" y="32" width="26" height="10" rx="5" transform="rotate(-24 159 37)"/>
+        <rect class="cf fill-p" x="62" y="12" width="20" height="9" rx="4.5" transform="rotate(32 72 16)"/>
+        <g class="cf">${J_AST(112,0,20)}</g><g class="cf">${J_AST(160,76,16,"l")}</g>
+        <path class="st-k" d="M14 280C80 270 150 288 220 276S290 274 326 280" fill="none" stroke-width="7" stroke-linecap="round"/>
+        <text class="han lt lt3 fill-w" x="184" y="94" font-size="42">퇴근</text>
+        <text class="an lt lt1 fill-w" x="184" y="262" font-size="186" textLength="87.8" lengthAdjust="spacingAndGlyphs">K</text>
+        <text class="an lt lt2 fill-w" x="277" y="262" font-size="186" textLength="42.6" lengthAdjust="spacingAndGlyphs">!</text>
+        ${J_GEAR(305,40,12,64,`<text class="han fill-k" text-anchor="middle" y="-1" font-size="14">${bd[0]}</text><text class="han fill-k" text-anchor="middle" y="16" font-size="14">${bd[1]}</text>`)}
+      </svg>
+      <div class="ch drop">${myMg(210,"happy","")}</div>
     </div>
-    <p class="sent">${S.sent?"결과가 선생님 시트로 전송됐어요.":"결과는 이 기기에 저장됐어요."}<br>문 앞에서 이 화면을 선생님께 보여주세요.</p>
-    <button class="btn ghost" id="again">처음 화면으로</button>
-    <div class="linkrow"><button class="linkbtn" id="to-mine">내 기록 보기 →</button><button class="linkbtn" id="to-rank">🏆 퇴실 퀴즈 랭킹 →</button></div>
+    <p class="say">${S.n}문제 전부 정답. <b>집에 가도 됩니다.</b></p>
+    <section class="pass" aria-label="퇴근증">
+      <div class="pass-h"><span class="kind">퇴근증</span><span>${esc(korDate(new Date(S.endAt)))}</span></div>
+      <div class="pass-who"><b>${esc(S.name)}</b><span class="cls">${esc(S.cls)}</span></div>
+      <div class="pass-set">${esc(setTxt)}<small>${esc(mixLine())}</small></div>
+      <div class="pass-big"><div><span>오늘 암호</span><b class="code">${code}</b></div><div><span>현재 시각</span><b class="clock" id="clock">${fmtTime(new Date())}</b></div></div>
+    </section>
+    <div class="rec"><div><b>${S.round}회</b><span>도전 횟수</span></div><div><b>${S.firstOk.size} / ${S.n}</b><span>첫 시도 정답</span></div><div><b>${solved}문제</b><span>푼 문제 수</span></div><div><b>${fmtDur(S.endAt-S.startAt)}</b><span>걸린 시간</span></div></div>
+    <p class="growth">${growth} · ${S.round>1? S.round+"번째 도전에 전부 통과":"첫 도전에 전부 통과"}</p>
+    <p class="sent">${S.sent?"결과가 선생님 시트로 전송됐어요.":"결과는 이 기기에 저장됐어요."}<br><b>문 앞에서 이 화면을 선생님께 보여주세요.</b></p>
+    <button class="jbtn lime" id="to-rank">퇴근 미션 랭킹 보기</button>
+    <button class="jbtn line" id="to-mine">내 기록 보기</button>
+    <div class="linkrow"><button class="linkbtn" id="again">처음 화면으로</button></div>
   </div>`;
 }
 function renderResult(){
@@ -1208,7 +1240,7 @@ function renderResult(){
   if(S.prev){ const d=S.firstOk.size-S.prev.first; growth = d>0? `지난번 ${S.prev.first}/${S.prev.n} → <span class="up">+${d}</span>` : d===0? `지난번과 같아요 (${S.prev.first}/${S.prev.n})` : `지난번 ${S.prev.first}/${S.prev.n}`; }
   return `<div class="wrap">
     <section class="card prac-res" aria-label="연습 결과">
-      <div class="mas-row">${mas("m-party-happy",84)}</div>
+      <div class="mas-row"><span class="mg" style="width:84px">${myMg(84,"happy","m-party-happy")}</span></div>
       <div style="display:flex;justify-content:space-between;align-items:center"><span class="prac-tag">연습</span><span class="muted" style="font-size:12px">${korDate(new Date(S.endAt))}</span></div>
       <div><span class="chip" style="--c:${SUBJ[S.set.subj][1]}">${esc(S.set.group)}</span></div>
       <h1 style="font-size:22px">${esc(S.set.name)} 다 맞혔어요</h1>
@@ -1223,10 +1255,10 @@ function renderResult(){
       <div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><span class="growth">${growth}</span><span class="muted" style="font-size:12px">${S.round>1? S.round+"번째 시도에 완료":"한 번에 완료!"}</span></div>
       ${S.firstWrong.length? `<div class="field"><span class="lbl">처음에 틀린 것</span><div class="muted" style="font-size:13px;line-height:1.6">${S.firstWrong.map(i=>esc(itemLabel(S.plans[i].it))).join(" · ")}</div></div>`:""}
     </section>
-    <p class="sent">${S.sent?"연습 기록이 선생님 시트에 「연습」으로 저장됐어요.":"연습 기록은 이 폰에 저장됐어요."} 퇴실증이 아니에요.</p>
+    <p class="sent">${S.sent?"연습 기록이 선생님 시트에 「연습」으로 저장됐어요.":"연습 기록은 이 폰에 저장됐어요."} 퇴근증이 아니에요.</p>
     <button class="btn" id="again-same">같은 범위 한 번 더</button>
     <button class="btn ghost" id="again">다른 범위 고르기</button>
-    <div class="linkrow"><button class="linkbtn" id="to-mine">내 기록 보기 →</button><button class="linkbtn" id="to-rank">🏆 연습 랭킹 →</button></div>
+    <div class="linkrow"><button class="linkbtn" id="to-mine">내 기록 보기 →</button><button class="linkbtn" id="to-rank">연습 랭킹 →</button></div>
     ${S.cls==="원외생"? contactCard("전 범위·더 많은 문항으로 풀고 싶다면") : ""}
   </div>`;
 }
@@ -1237,7 +1269,7 @@ function bindResult(){
   $("#to-rank").onclick=()=>{ S=null; openRank("prac", "practice"); };
 }
 function bindTicket(){
-  clockTimer=setInterval(()=>{ const c=$("#clock"); if(c) c.textContent=fmtTime(new Date()); },1000);
+  clearInterval(clockTimer); clockTimer=setInterval(()=>{ const c=$("#clock"); if(c) c.textContent=fmtTime(new Date()); },1000);
   $("#again").onclick=()=>{ S=null; go(home()); };
   $("#to-mine").onclick=()=>{ clearInterval(clockTimer); openMine(home()); };
   $("#to-rank").onclick=()=>{ clearInterval(clockTimer); openRank("cls", home()); };
@@ -1277,7 +1309,7 @@ function renderMine(){
   return `<div class="wrap mine">
     ${back}
     <section class="card setcard" style="gap:8px">
-      <div class="stkm">${mas("m-book-happy",84)}</div>
+      <div class="stkm">${myMg(84,"base","m-book-happy")}</div>
       <span class="eyebrow">내 기록</span>
       <h1>${esc(mineName)}</h1>
       ${names.length>1? `<select id="mine-name" class="pick" aria-label="이름">${names.map(n=>`<option ${n===mineName?"selected":""}>${esc(n)}</option>`).join("")}</select>` : ""}
@@ -1330,43 +1362,75 @@ function rankLoad(force){
     ()=>{ RK.loading=false; RK.err="net"; render(); });
 }
 function openRank(kind, back){ RK.kind=kind; RK.back=back; if(!RK.cls) RK.cls = entry.cls || preset.c || "전체"; go("rank"); window.scrollTo(0,0); }
-function renderRank(){
+function rkIsMe(x){ const my = (S && S.name) || (me && me.nm) || entry.name || ""; return !!(x && (x.me || (my && String(x.name).replace(/\s+/g,"")===String(my).replace(/\s+/g,"")))); }
+function rkAv(x, size, crown){   // 랭킹 줄 캐릭터: 그 학생 몽글이(top[i].char) — 캐릭터를 끈 학생(null)은 이니셜 동그라미. 1위는 왕관
+  const ini = x.ini || String(x.name||"").trim().charAt(0);
+  // char: 객체 = 그 학생 몽글이 · null = 캐릭터를 끈 학생(이니셜) · 없음(서버가 아직 char 를 안 보냄) = 기본 몽글이
+  if(x.char!==null && HM()){ const st = x.char || null; return mg(crown? {...(st||{}), hat:"crown"} : st, size, {expr:crown?"happy":"base", anim:false, shadow:false}); }
+  return mg(null, size, {show:false, initial:ini}) + (crown? CROWN_SVG : "");
+}
+function renderRank(){   // 랭킹 = 보상 순간(J): T●P 5 포스터. 정렬·조건·공개 범위(TOP 5)는 서버 그대로
   const prac = RK.kind==="prac", board = prac? RK.board : "acc";
-  const back=`<button class="btn small ghost" id="rk-back" style="align-self:flex-start">← 돌아가기</button>`;
-  const head=`<section class="card setcard" style="gap:6px"><div class="stkm">${mas("m-trophy-gold-happy",84)}</div>
-      <span class="eyebrow">${prac? "혼자 연습" : "퇴실 퀴즈"} · TOP 5</span><h1>${prac? "연습 랭킹" : "퇴실 퀴즈 랭킹"}</h1></section>`;
-  const boardSeg = prac? `<div class="seg rk-boards" role="tablist" aria-label="랭킹 종류">${[["acc","🎯 스나이퍼","첫 시도 정답률"],["qty","🔥 갓생러","푼 문제 수"]].map(([k,t,d])=>`<button data-rboard="${k}" aria-pressed="${k===board}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>` : "";
+  const perTxt = RK.per==="week"? "이번 주" : "이번 달";
+  const title = perTxt+" "+(prac? (board==="qty"? "갓생러" : "혼자 연습") : "퇴근 미션");
+  const since = RK.data? (RK.per==="week"? RK.data.weekStart : RK.data.monthStart) : "";
+  const sinceTxt = since? `${+since.slice(5,7)}/${+since.slice(8,10)}~` : perTxt;
+  const boardSeg = prac? `<div class="seg rk-boards" role="tablist" aria-label="랭킹 종류">${[["acc","스나이퍼","첫 시도 정답률"],["qty","갓생러","푼 문제 수"]].map(([k,t,d])=>`<button data-rboard="${k}" aria-pressed="${k===board}"><b>${t}</b><small>${d}</small></button>`).join("")}</div>` : "";
   const perSeg=`<div class="seg" role="group" aria-label="기간">${[["week","이번 주"],["month","이번 달"]].map(([k,t])=>`<button data-rper="${k}" aria-pressed="${k===RK.per}">${t}</button>`).join("")}</div>`;
   const clsSeg= prac? "" : `<div class="seg" role="group" aria-label="반">${["전체", ...Object.keys(CONFIG.classes)].map(c=>`<button data-rcls="${esc(c)}" aria-pressed="${c===RK.cls}">${esc(c)}</button>`).join("")}</div>`;
-  let body;
-  if(RK.err==="none") body=`<section class="card an-msg">${mas("m-sleep",72)}<br>랭킹은 곧 열려요!</section>`;
-  else if(RK.err) body=`<section class="card an-msg">${mas("m-cloud",72)}<br>랭킹을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.<br><button class="linkbtn" id="rk-retry">다시 불러오기</button></section>`;
-  else if(!RK.data) body=`<section class="card an-msg">${mas("m-hourglass",64)}<br>불러오는 중…</section>`;
+  let body, L=null;
+  if(RK.err==="none") body=`<div class="jmsg">랭킹은 곧 열려요!</div>`;
+  else if(RK.err) body=`<div class="jmsg">랭킹을 불러오지 못했어요. 잠시 뒤 다시 시도해 주세요.<button class="linkbtn" id="rk-retry">다시 불러오기</button></div>`;
+  else if(!RK.data) body=`<div class="jmsg">불러오는 중…</div>`;
   else {
     const key = prac? `prac|${RK.per}${board==="qty"?"|qty":""}` : `cls|${RK.cls}|${RK.per}`;
     const L0 = RK.data.lists[key], min=RK.data.min||{};
-    if(!L0 && board==="qty") body=`<section class="card an-msg">${mas("m-flame",72)}<br>갓생러 랭킹은 곧 열려요!</section>`;
+    if(!L0 && board==="qty") body=`<div class="jmsg">갓생러 랭킹은 곧 열려요!</div>`;
     else {
-      const L = {...(L0||{n:0,top:[]})}; L.top=(L.top||[]).filter(x=>okName(String(x.name).trim())).slice(0,5);
-      const medal=["🥇","🥈","🥉"];
-      const big = x => board==="qty"? `${x.q}<small>문제</small>` : `${x.acc}<small>%</small>`;
+      L = {...(L0||{n:0,top:[]})}; L.top=(L.top||[]).filter(x=>okName(String(x.name).trim())).slice(0,5);
+      const big = x => board==="qty"? `${x.q}<em>문제</em>` : `${x.acc}<em>%</em>`;
       const sub = x => board==="qty"? `정답률 ${x.acc}%` : (prac? `${x.q}문제` : `${x.c}회 · ${x.q}문제`);
-      const cards=[0,1,2].map(i=>{ const x=L.top[i];
-        return x? `<div class="podium p${i+1}"><span class="md">${medal[i]}</span><b class="nm">${esc(x.name)}</b><span class="acc">${big(x)}</span><span class="sub">${sub(x)}</span></div>`
-                : `<div class="podium p${i+1} empty"><span class="md">${medal[i]}</span><span class="nm muted">도전자를 기다려요</span></div>`; }).join("");
-      const rest=[3,4].map(i=>{ const x=L.top[i];
-        return `<div class="rk-row${x?"":" empty"}"><span class="no">${i+1}</span><span class="nm">${x? esc(x.name) : "—"}</span><span class="sub">${x? sub(x) : ""}</span><span class="v">${x? big(x) : ""}</span></div>`; }).join("");
-      const since = RK.per==="week"? RK.data.weekStart : RK.data.monthStart;
-      const sinceTxt = since? `${+since.slice(5,7)}/${+since.slice(8,10)}~` : "";
+      const rows=[0,1,2,3,4].map(i=>{ const x=L.top[i];
+        if(!x) return `<div class="rr empty"><span class="n">${i+1}</span><div class="who"><b>도전자를 기다려요</b></div></div>`;
+        const mine=rkIsMe(x), first=i===0;
+        return `<div class="rr${first?" first":""}${mine?" me":""}"><span class="n">${i+1}</span><div class="ch">${rkAv(x, first?48:38, first)}</div><div class="who"><b>${esc(x.name)}${mine?" <i>나</i>":""}</b><small>${sub(x)}</small></div><span class="v">${big(x)}</span></div>`; }).join("");
       const cond = board==="qty"? "" : prac? `${min.prac||50}문제 이상` : `${RK.per==="week"? (min.clsWeek||1) : (min.clsMonth||3)}회 이상`;
-      body=`<div class="podiums">${cards}</div><div class="rk-rest">${rest}</div>
-        <div class="rk-meta">${sinceTxt?`<span>📅 ${sinceTxt}</span>`:""}${cond?`<span>✔ ${cond} 푼 사람</span>`:""}<span>🕙 ${fmtTime(new Date(RK.at)).slice(0,5)} 업데이트</span></div>`;
+      const mi = L.top.findIndex(rkIsMe), known = !!((S && S.name) || (me && me.nm) || entry.name);
+      let myTxt = "";
+      if(mi===0) myTxt = "지금 1위예요.";
+      else if(mi>0){ const a=L.top[mi-1], b=L.top[mi];
+        myTxt = board==="qty"? `${mi}위와 ${a.q-b.q}문제 차이.` : (a.acc===b.acc? `${mi}위와 정답률이 같아요.<br>푼 문제 수로 갈려요.` : `${mi}위와 정답률 ${Math.round((a.acc-b.acc)*10)/10}%p 차이.`); }
+      else myTxt = `아직 TOP 5 밖이에요.${cond? `<br>${cond} 푼 사람이 올라요.` : ""}`;
+      const myrk = known? `<div class="myrk"><div class="ch">${myMg(42,"base","")}</div><div><small>내 순위</small><b>${mi>=0? (mi+1)+"위" : "—"}</b></div><p>${myTxt}</p></div>` : "";
+      body=`<div class="rk-list">${rows}</div>${myrk}
+        <div class="rk-meta">${cond?`<span>${cond} 푼 사람</span>`:""}<span>${fmtTime(new Date(RK.at)).slice(0,5)} 업데이트</span></div>`;
     }
   }
-  return `<div class="wrap">${back}${head}${boardSeg}${perSeg}${clsSeg}${body}</div>`;
+  const x0 = L && L.top[0];
+  const och = x0? rkAv(x0, 134, true) : `<div class="inib">?</div>`;
+  const backTxt = RK.back==="practice"? "연습하러 가기" : RK.back==="entry"? "오늘 퇴근 미션으로" : "돌아가기";
+  return `<div class="jw">
+    <div class="jtb"><button class="x" id="rk-back" aria-label="돌아가기"><svg viewBox="0 0 12 12" aria-hidden="true"><path d="M8 2L4 6l4 4" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg></button><span class="tab">${prac?"연습 랭킹":"랭킹"}</span><span class="pill">${esc(sinceTxt)}</span></div>
+    <div class="poster rk">
+      <svg viewBox="0 0 340 196" role="img" aria-label="${esc(title)} TOP 5">
+        <text class="han fill-w" x="22" y="34" font-size="22">${esc(title)}</text>
+        <rect class="fill-p" x="200" y="44" width="22" height="9" rx="4.5" transform="rotate(-20 211 48)"/>
+        ${J_AST(230,52,16,"l")}
+        <text class="an fill-w" x="27" y="168" font-size="112" textLength="44.3" lengthAdjust="spacingAndGlyphs">T</text>
+        <text class="an fill-w" x="183" y="168" font-size="112" textLength="52.9" lengthAdjust="spacingAndGlyphs">P</text>
+        <text class="an fill-l" x="249" y="168" font-size="112" textLength="55.3" lengthAdjust="spacingAndGlyphs">5</text>
+        <path class="st-k" d="M18 186C80 178 150 192 220 182S290 180 322 186" fill="none" stroke-width="6" stroke-linecap="round"/>
+        ${J_GEAR(306,40,-10,56,`<text class="han fill-k" text-anchor="middle" y="7" font-size="19">1위</text>`)}
+      </svg>
+      <div class="ch">${och}</div>
+    </div>
+    ${boardSeg}${perSeg}${clsSeg}${body}
+    <button class="jbtn lime" id="rk-back2">${backTxt}</button>
+  </div>`;
 }
 function bindRank(){
-  $("#rk-back").onclick=()=>{ const b=RK.back||home(); RK.back=null; go(b); };
+  const rkb=()=>{ const b=RK.back||home(); RK.back=null; go(b); };
+  $("#rk-back").onclick=rkb; const rk2=$("#rk-back2"); if(rk2) rk2.onclick=rkb;
   document.querySelectorAll("[data-rper]").forEach(b=>b.onclick=()=>{ RK.per=b.dataset.rper; render(); });
   document.querySelectorAll("[data-rboard]").forEach(b=>b.onclick=()=>{ RK.board=b.dataset.rboard; render(); });
   document.querySelectorAll("[data-rcls]").forEach(b=>b.onclick=()=>{ RK.cls=b.dataset.rcls; render(); });
@@ -1413,11 +1477,11 @@ function renderTeacher(){
           <div id="qr" aria-label="학생용 QR 코드"></div>
           <div class="url" id="url">${esc(studentURL())}</div>
           <div class="bigcode"><span class="muted" style="font-size:13px;font-weight:600">오늘 암호</span><b>${dailyCode(today(), tstate.set)}</b></div>
-          <p class="muted" style="margin:0;font-size:13px">학생 퇴실증의 암호가 이 숫자와 같으면 오늘 이 세트를 통과한 것입니다.</p>
+          <p class="muted" style="margin:0;font-size:13px">학생 퇴근증의 암호가 이 숫자와 같으면 오늘 이 세트를 통과한 것입니다.</p>
           <button class="btn" id="preview">이 세트로 학생 화면 열기</button>
         </section>
         <section class="card" style="display:flex;flex-direction:column;gap:12px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="font-size:16px">오늘 퇴실 기록</h2><span class="muted" style="font-size:12px">${log.length}명</span></div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><h2 style="font-size:16px">오늘 퇴근 기록</h2><span class="muted" style="font-size:12px">${log.length}명</span></div>
           <div class="note">여기에는 이 기기에서 푼 기록만 보여요. 학생 전체 기록은 「학생 분석」 탭에서 보세요. <button class="linkbtn" id="clear-local">이 기기 기록 비우기</button></div>
           ${log.length? `<div class="tbl"><table><thead><tr><th>시각</th><th>이름</th><th>반</th><th>세트</th><th>첫 시도</th><th>시도</th><th>시간</th></tr></thead><tbody>${rows}</tbody></table></div>` : `<div class="empty">아직 기록이 없어요. 학생 화면에서 한 세트를 끝까지 풀어보세요.</div>`}
           ${worst.length? `<div class="field"><span class="lbl">첫 시도에 많이 틀린 문항</span><div class="worst">${worst.map(w=>`<div><span>${esc(w.name)}</span><span class="c">${w.c}명</span></div>`).join("")}</div></div>`:""}
@@ -1446,7 +1510,7 @@ function bindTeacher(){
   if($("#pin-new-go")) $("#pin-new-go").onclick=()=>{ const v=$("#pin-new").value.trim(), m=$("#pin-new-msg");
     if(v.length<4){ m.textContent="4자 이상으로 해 주세요."; return; }
     store.set("pinh", hashStr(v)); $("#pin-new").value=""; m.textContent="바뀌었어요. 다음 입장부터 새 PIN으로 들어가요."; };
-  $("#clear-local").onclick=()=>{ if(!confirm("이 기기에 저장된 풀이 기록(오늘 퇴실 기록·지난 점수)을 모두 지울까요? 시트 기록은 그대로예요.")) return;
+  $("#clear-local").onclick=()=>{ if(!confirm("이 기기에 저장된 풀이 기록(오늘 퇴근 기록·지난 점수)을 모두 지울까요? 시트 기록은 그대로예요.")) return;
     try{ Object.keys(localStorage).filter(k=>k.startsWith(SK) && /^(log|mylog|hist\.|phist\.)/.test(k.slice(SK.length))).forEach(k=>localStorage.removeItem(k)); }catch(e){} render(); };
   $("#preview").onclick=()=>{ preset={...tstate, date:today()}; store.set("preset2", preset); mode="class"; entry={cls:tstate.cls, name:null}; S=null; go("entry"); };
   const box=$("#qr");
@@ -1584,9 +1648,9 @@ function renderAnalysis(){
   const head = `<div class="an-head"><div><span class="eyebrow">학생 분석${AN.at? ` · ${fmtTime(AN.at).slice(0,5)} 기준` : ""}</span><h1 style="font-size:24px">${AN.stu? "학생별 기록" : "반 전체 기록"}</h1></div>
     <div class="an-actions">${ready? `<button class="btn small ghost" id="an-reload" ${AN.loading?"disabled":""}>${AN.loading?"불러오는 중…":"새로고침"}</button>` : ""}${hub? "" : `<button class="btn small ghost" id="an-setup-btn">연결 설정</button>`}</div></div>`;
   if(!hub && (AN.setup || !ready)) return head + anSetupHTML();
-  if(AN.err==="login") return head + `<section class="card an-msg">${mas("m-cloud",72)}<br>선생님 로그인이 풀렸어요. 다시 로그인하면 기록을 볼 수 있어요.<br><button class="linkbtn" id="an-relogin">다시 로그인</button></section>`;
-  if(AN.err) return head + `<section class="card an-msg">${mas("m-cloud",72)}<br>${AN.err==="key"? "비밀 키가 맞지 않아요. 「연결 설정」에서 Apps Script 코드의 KEY와 같은지 확인해 주세요." : "기록을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요."}${hub? `<br><button class="linkbtn" id="an-reload2">다시 불러오기</button>` : ""}</section>`;
-  if(!AN.recs) return head + `<section class="card an-msg">${mas("m-hourglass",64)}<br>불러오는 중…</section>`;
+  if(AN.err==="login") return head + `<section class="card an-msg">선생님 로그인이 풀렸어요. 다시 로그인하면 기록을 볼 수 있어요.<br><button class="linkbtn" id="an-relogin">다시 로그인</button></section>`;
+  if(AN.err) return head + `<section class="card an-msg">${AN.err==="key"? "비밀 키가 맞지 않아요. 「연결 설정」에서 Apps Script 코드의 KEY와 같은지 확인해 주세요." : "기록을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요."}${hub? `<br><button class="linkbtn" id="an-reload2">다시 불러오기</button>` : ""}</section>`;
+  if(!AN.recs) return head + `<section class="card an-msg">불러오는 중…</section>`;
   const recs=anFilter(), sum=anSum(recs);
   const cm=anClassesOf(AN.recs), clsOpts=["전체", ...Object.keys(CONFIG.classes), ...(AN.recs.some(r=>!cm[r.key])? ["연습만"] : [])];
   const filters = `<div class="an-filters">
@@ -1609,7 +1673,7 @@ function renderAnalysis(){
   const worst=anWorst(recs, 10);
   return head + filters + kpis + `<div class="tgrid an-grid">
     <section class="card an-card"><div class="an-ttl"><h2>학생별</h2><label class="sortsel">정렬 <select id="an-sort">${[["low","정답률 낮은 순"],["many","응시 많은 순"],["recent","최근 순"],["name","이름순"]].map(([k,t])=>`<option value="${k}" ${k===AN.sort?"selected":""}>${t}</option>`).join("")}</select></label></div>
-      ${studs.length? `<div class="tbl"><table class="stbl"><thead><tr><th>이름</th><th>반</th><th>수업</th><th>연습</th><th>정답률</th><th>최근 10회</th><th>약한 영역</th><th>마지막</th></tr></thead><tbody>${rows}</tbody></table></div><p class="hint">이름을 누르면 그 학생의 자세한 기록이 나와요.</p>` : `<div class="empty">${mas("m-sleep",56)}<br>이 조건에 맞는 기록이 없어요.</div>`}</section>
+      ${studs.length? `<div class="tbl"><table class="stbl"><thead><tr><th>이름</th><th>반</th><th>수업</th><th>연습</th><th>정답률</th><th>최근 10회</th><th>약한 영역</th><th>마지막</th></tr></thead><tbody>${rows}</tbody></table></div><p class="hint">이름을 누르면 그 학생의 자세한 기록이 나와요.</p>` : `<div class="empty">이 조건에 맞는 기록이 없어요.</div>`}</section>
     <div style="display:flex;flex-direction:column;gap:14px">
       <section class="card an-card"><div class="an-ttl"><h2>영역별 첫 시도 정답률</h2></div>${barsHTML(sum, null)}</section>
       <section class="card an-card"><div class="an-ttl"><h2>많이 틀린 문항</h2><span class="muted" style="font-size:12px">틀린 횟수 · 학생 수</span></div>
@@ -1685,6 +1749,7 @@ function render(){
   $("#nav-student").setAttribute("aria-pressed", view!=="teacher");
   $("#nav-teacher").setAttribute("aria-pressed", view==="teacher");
   const app=$("#app");
+  { const pane=app.closest(".qz"); if(pane) pane.classList.toggle("qz-j", (view==="ticket" && !!S) || view==="rank"); }   // 보상 순간(J): 판 전체를 인디고로
   $("#nav-teacher").hidden = !(tUnlocked() || view==="teacher");
   $(".nav").hidden = $("#nav-teacher").hidden;
   if(view==="pin"){ app.innerHTML=renderPin(); bindPin(); }
@@ -1708,6 +1773,16 @@ document.addEventListener("keydown",e=>{
   else if(S.answered && (e.key==="Enter"||e.key===" ")){ e.preventDefault(); advance(); }
 });
 render();
+loadMyChar();
+window.HubQuiz = { openRank: function(kind){   // 허브 홈 「이번 주 랭킹」 카드 → 퇴근 미션 탭을 연 뒤 부름. kind: 'cls'(기본) | 'prac'
+  const k = kind==="prac" ? "prac" : "cls";
+  if(S && !S.done && (view==="quiz" || view==="lap")) return;   // 풀던 미션은 끊지 않음
+  RK.per="week"; if(k==="prac") RK.board="acc";
+  openRank(k, (view==="entry"||view==="practice")? view : home()); } };
+if(window.__QZ_TEST) window.__qz = { get S(){ return S; }, choose, advance, go, openRank, render };   // test.html 전용(화면 확인용) — 허브에선 꺼져 있음
+/* 몽글이(mongle.js)가 퀴즈보다 늦게 오면 한 번 다시 그림 */
+(function(){ const ok=()=>{ const M=HM(); if(!M) return false; try{ if(M.mount) M.mount(); }catch(e){} return true; };
+  if(ok()) return; let n=0; const t=setInterval(()=>{ if(ok()){ clearInterval(t); if(view==="quiz"||view==="lap"||view==="ticket") reCh(); else render(); } else if(++n>30) clearInterval(t); }, 300); })();
 /* 공지 팝업 (이미지) — 한 번 닫으면 이 폰에서는 다시 안 뜸.
    새 공지를 띄울 땐 NOTICE.id 를 바꾸면 모두에게 다시 한 번 뜬다. 내릴 땐 NOTICE.img 를 ""로. */
 const NOTICE = { id:"2026-11-08-pause", img:DEV?"":"qz/notice.png",   /* 개발판(허브)에서는 점검 공지를 안 띄움 (2026-11-24) */ alt:"공지: 11월 8일 오후 3시 이후 사이트 운영 중단, 12월 중 재오픈" };
@@ -1725,7 +1800,7 @@ const NOTICE = { id:"2026-11-08-pause", img:DEV?"":"qz/notice.png",   /* 개발�
   ov.addEventListener("click", close);
   im.addEventListener("load", ()=>document.body.appendChild(ov));
 })();
-/* 사이트 닫기 — CLOSED=true 면 닫을 수 없는 공지 이미지가 화면 전체를 덮음(혼자 연습 불가). 수업 QR로 들어온 수업 모드(퇴실 퀴즈)는 열려 있음. 강사 화면(#teacher)은 그대로 열림.
+/* 사이트 닫기 — CLOSED=true 면 닫을 수 없는 공지 이미지가 화면 전체를 덮음(혼자 연습 불가). 수업 QR로 들어온 수업 모드(퇴근 미션)는 열려 있음. 강사 화면(#teacher)은 그대로 열림.
    다시 열 땐 CLOSED=false 로 바꾸고 APP_V 를 올릴 것. */
 const CLOSED = DEV ? false : true;   // 개발판(허브)은 열어 두고 본판만 닫음 (2026-11-24)
 (function(){

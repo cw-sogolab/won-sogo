@@ -7,12 +7,16 @@
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script>
+/* 테마: ?theme=light|dark → 없으면 기기 설정 (허브가 <html data-theme> 를 정하는 것 흉내) */
+(function () { var t = new URLSearchParams(location.search).get('theme'); if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="stylesheet" href="../assets/ds.css">
 <link rel="stylesheet" href="cur.css">
 <style>
 /* 허브 틀 흉내: 바탕색만 가진 빈 페이지. ?clash 로 열면 일부러 전역 규칙을 심어 .cur 가 흔들리는지 확인 */
 html,body{margin:0}
-body{background:#F5F3FF;font-family:sans-serif}
-@media (prefers-color-scheme: dark){body{background:#14122B;color:#fff}}
+body{background:var(--bg);color:var(--ink);font-family:sans-serif}
 .tbar{padding:10px 16px;font:600 13px sans-serif;background:#ff6a3d;color:#fff;line-height:1.9}
 .tbar a{color:#fff;margin-right:10px}
 body.clash button{background:red;border-radius:0}
@@ -33,11 +37,14 @@ body.clash *{font-family:serif}
   <a href="?live&code=KM482919">?live (서울 서버)</a>
   <a href="?demo&clash">충돌 테스트</a>
   <a href="?demo&unmount">mount→unmount→mount</a>
+  <a href="?demo&theme=light">라이트</a> <a href="?demo&theme=dark">다크</a>
+  <a href="?demo&nochar">캐릭터 끔</a>
 </div>
 <div id="wrap"><div id="root"></div></div>
 <script src="../../assets/config.js"></script>
 <script src="../hub-session.js"></script>
 <script src="../assets/mascots.js"></script>
+<script src="../assets/mongle.js"></script>
 <script src="cur.js"></script>
 <script>
 var Q = new URLSearchParams(location.search), LIVE = Q.has('live');
@@ -91,6 +98,7 @@ function demoData() {
 var C = Q.get('case');
 var fake = {
   name: '가상 학생',
+  char: function () { return Promise.resolve({ ok: true, data: { state: { body: 'lavender', hat: 'cap', glasses: 'none', charm: 'star' }, show: !Q.has('nochar') } }); },
   call: function (action, payload) {
     if (action !== 'curriculum') return Promise.resolve({ ok: false, error: '알 수 없는 요청: ' + action });
     var wait = C === 'slow' ? 2500 : 250;

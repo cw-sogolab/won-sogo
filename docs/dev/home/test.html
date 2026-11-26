@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>홈·꾸미기·설정 테스트</title>
+<meta name="robots" content="noindex">
+<script>
+/* ?theme=light|dark (없으면 기기 설정) */
+(function () { var t = new URLSearchParams(location.search).get('theme'); if (t !== 'light' && t !== 'dark') t = matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; document.documentElement.setAttribute('data-theme', t); })();
+</script>
+<link rel="stylesheet" href="../assets/ds.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&family=Anton&family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="home.css">
+<link rel="stylesheet" href="../closet/closet.css">
+<link rel="stylesheet" href="../settings/settings.css">
+<style>
+html,body{margin:0;height:100%}
+body{background:var(--bg);display:flex;flex-direction:column;font-family:var(--f)}
+.tbar{flex:none;padding:8px 14px;font:600 12.5px var(--f);background:#FF6A3D;color:#fff;line-height:1.9}
+.tbar a{color:#fff;margin-right:10px}
+#root{flex:1;min-height:0;position:relative}
+</style>
+</head>
+<body>
+<div class="tbar" id="tbar">홈·꾸미기·설정 테스트 (가짜 데이터) ·
+  <a href="?">홈</a><a href="?char=off">홈(캐릭터 끔)</a><a href="?screen=closet">꾸미기</a><a href="?screen=settings">설정</a><a href="?case=local">서버에 charGet 없음</a><a href="?case=norank">랭킹 비어 있음</a><a href="?theme=dark">다크</a></div>
+<div id="root"></div>
+<script src="../assets/mongle.js"></script>
+<script src="icons.js"></script>
+<script src="../hub-session.js"></script>
+<script src="home.js"></script>
+<script src="../closet/closet.js"></script>
+<script src="../settings/settings.js"></script>
+<script>
+var Q = new URLSearchParams(location.search), CASE = Q.get('case') || '', SCREEN = Q.get('screen') || 'home';
+if (Q.has('notbar')) document.getElementById('tbar').hidden = true;
+HubIcons.mount();
+/* ---- 가짜 데이터 (실제 학생 아님) ---- */
+function d(off) { var x = new Date(); x.setDate(x.getDate() + off); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); }
+var VIEW = { name: '김예시', classes: [
+  { kind: '개념반', time: '화·목 19:00', current: true,
+    hw: [{ label: '정치 3주차 복습', due: d(0) + ' 23:59', done: false }, { label: '경제 1회 문제', due: d(2) + ' 23:59', done: false }, { label: '지난주 숙제', due: d(-2), done: false, overdue: true }],
+    tests: [{ label: '11월 2주 소테스트', date: d(-6), score: 17, total: 20 }, { label: '11월 1주 소테스트', date: d(-13), score: 14, total: 20 }] },
+  { kind: '단풀반', time: '토 13:00', current: true, hw: [], tests: [] }] };
+var ITEMS = [];
+HubSession.items().forEach(function (x) {
+  var own = x.grade === 'basic' || ['mint', 'beanie', 'sun', 'heart'].indexOf(x.id) > -1 && x.kind !== 'charm' || (x.kind === 'charm' && x.id === 'heart');
+  var c = { body: { mint: '퇴근 미션 10회', sky: '7일 연속 출석', butter: '월말 80% 이상' }, hat: { beanie: '퀴즈 30회 참가', headphone: '퇴근 미션 20회', hood: '숙제 기한 내 10번', bucket: '7일 연속 출석', crown: '한 과목 만점' },
+    glasses: { sun: '7일 연속 출석', square: '퇴근 미션 첫 도전 통과 5번', star: '월말 90% 이상' }, charm: { heart: '질문 첫 글', bolt: '퇴근 미션 첫 도전 통과 5번', chain: '14일 연속 출석', fuji: '지난달보다 +10점', sakura: '전 과목 응시' } }[x.kind][x.id] || '';
+  var pg = { sky: [4, 7], bucket: [4, 7], bolt: [3, 5], hood: [6, 10], chain: [4, 14] }[x.id];
+  ITEMS.push({ id: x.id, kind: x.kind, grade: x.grade, owned: !!own, cond: own ? '' : c, progress: !own && pg ? { now: pg[0], goal: pg[1] } : null });
+});
+var CH = { state: { body: 'lavender', hat: 'cap', glasses: 'none', charm: 'star' }, show: !Q.has('char') || Q.get('char') !== 'off', star: 240, items: ITEMS };
+var RANK = { ok: true, weekStart: d(-2), lists: CASE === 'norank' ? {} : { 'cls|전체|week': { n: 6, top: [
+  { name: '이샘플', acc: 96, q: 100, c: 5, char: { body: 'mint', hat: 'crown', glasses: 'round', charm: 'star' }, ini: '샘' },
+  { name: '박테스트', acc: 90, q: 80, c: 4, char: { body: 'peach', hat: 'headphone', glasses: 'none', charm: 'bolt' }, ini: '테' },
+  { name: '김예시', acc: 88, q: 80, c: 4, char: null, ini: '예' },
+  { name: '정연습', acc: 80, q: 60, c: 3, char: null, ini: '연' } ] } } };
+/* 가짜 서버: HubSession.call 이 부르는 fetch 를 가로챔 */
+var realFetch = window.fetch;
+window.fetch = function (url, o) {
+  var res = function (j) { return Promise.resolve({ ok: true, json: function () { return Promise.resolve(JSON.parse(JSON.stringify(j))); } }); };
+  if (/mode=rank/.test(url)) return new Promise(function (r) { setTimeout(function () { r(res(RANK)); }, 150); });
+  if (url === 'demo:api') {
+    var b = JSON.parse(o.body), a = b.action, p = b.payload;
+    if (a === 'login') return res({ ok: true, data: Object.assign({ tok: 'demo-tok' }, VIEW) });
+    if (CASE === 'local' && /^char/.test(a)) return res({ ok: false, error: '알 수 없는 요청이에요: ' + a });
+    if (a === 'charGet') return res({ ok: true, data: CH });
+    if (a === 'charSet') {
+      var st = {}; ['body', 'hat', 'glasses', 'charm'].forEach(function (k) { st[k] = p[k] || CH.state[k]; });
+      CH.state = st; if (p.show !== undefined) CH.show = !!p.show; return res({ ok: true, data: { state: st, show: CH.show } });
+    }
+    return res({ ok: false, error: '알 수 없는 요청이에요: ' + a });
+  }
+  return realFetch.apply(this, arguments);
+};
+HubSession.init({ code: 'DEMO00', name: '김예시', env: 'dev', apiUrl: 'demo:api' });
+var themePref = 'auto';
+var THEME = { get: function () { return themePref; }, set: function (p) { themePref = p; var t = p === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light') : p; document.documentElement.setAttribute('data-theme', t); window.dispatchEvent(new CustomEvent('hub:theme', { detail: { theme: t, pref: p } })); } };
+var root = document.getElementById('root');
+function go(s) {
+  [HubHome, HubCloset, HubSettings].forEach(function (m) { m.unmount(); });
+  if (s === 'closet') HubCloset.mount(root, { session: HubSession, back: function () { go('home'); } });
+  else if (s === 'settings') HubSettings.mount(root, { session: HubSession, theme: THEME, back: function () { go('home'); }, open: go, leave: function () { alert('나가기'); } });
+  else HubHome.mount(root, { session: HubSession, name: '김예시', go: function (t) { console.log('go', t); }, open: function (x) { if (x === 'rank') console.log('rank'); else go(x); } });
+}
+go(SCREEN);
+</script>
+</body>
+</html>

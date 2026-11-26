@@ -9,7 +9,8 @@ var SeisekiMock = (function () {
   function createEnv(opts) {
     opts = opts || {};
     var tables = {}, cache = {}, images = {}, imgSeq = 0, accessLog = [], clock = opts.now || function () { return new Date(); };
-    Object.keys(L.TABLES).forEach(function (t) { tables[t] = []; });
+    Object.keys(L.TABLES).concat(Object.keys(L.READONLY || {})).forEach(function (t) { tables[t] = []; });   // READONLY = 퀴즈기록(퇴근 미션 기록, 읽기만)
+    var props = { ADMIN_PASSWORD: 'demo', SHOW_KEY: 'N' };   // 테스트는 env._props 로 바꿈 (예: CHAR_UNLOCK_ALL)
     function rand32() {
       if (typeof crypto !== 'undefined' && crypto.getRandomValues) { var a = new Uint32Array(1); crypto.getRandomValues(a); return a[0]; }
       return Math.floor(Math.random() * 4294967296);
@@ -27,7 +28,7 @@ var SeisekiMock = (function () {
         put: function (k, v, sec) { cache[k] = { v: v, exp: Date.now() + sec * 1000 }; },
         remove: function (k) { delete cache[k]; }
       },
-      props: { get: function (k) { return ({ ADMIN_PASSWORD: 'demo', SHOW_KEY: 'N' })[k] || ''; } },
+      props: { get: function (k) { return props[k] || ''; } },
       now: clock,
       uuid: function () { return 'tok-' + rand32().toString(36) + rand32().toString(36); },
       rand32: rand32,
@@ -36,7 +37,7 @@ var SeisekiMock = (function () {
       trashImage: function (id) { delete images[id]; },
       logAccess: function (row) { accessLog.push(Object.assign({}, row)); },   // 서버는 따로 둔 접속기록 시트, 미리보기는 메모리
       readLog: function () { return accessLog.map(function (r) { return Object.assign({}, r); }); },
-      _tables: tables, _images: images, _log: accessLog
+      _tables: tables, _images: images, _log: accessLog, _props: props
     };
     return env;
   }
@@ -166,12 +167,31 @@ var SeisekiMock = (function () {
       ['QDEMO6', 'WX446818', '역사', '산업혁명 순서', '증기기관과 전기의 순서가 헷갈려요.', 'Y', '2026-10-20 09:00', '대기', '', '', [], []]
     ].map(function (q) { return { '질문ID': q[0], '번호': q[1], '과목': q[2], '제목': q[3], '내용': q[4], '공개': q[5], '작성일': q[6], '상태': q[7], '답변': q[8], '답변일': q[9], '사진': q[10].join(','), '답변사진': q[11].join(',') }; });
     T['평가'] = [{ '월': '2026-10', '번호': 'KM482919', '코멘트': '본인이 잘 하고자 하는 의욕이 넘침', '수정일': '2026-10-15' }];
+    // 몽글이 꾸미기 예시 (2026-11-26, 모두 가상): 김예시는 민트 몸 + 캡 + 동글 안경 + 별 키링, 이샘플은 캐릭터를 끔, 나머지는 줄 없음(기본 모습)
+    T['캐릭터'] = [
+      { '번호': 'KM482919', '몸': 'mint', '모자': 'cap', '안경': 'round', '키링': 'star', '표시': 'Y', '수정일': '2026-10-19 21:30' },
+      { '번호': 'TR520615', '몸': 'peach', '모자': 'none', '안경': 'none', '키링': 'none', '표시': 'N', '수정일': '2026-10-18 20:00' },
+      { '번호': 'BD774119', '몸': 'lavender', '모자': 'cap', '안경': 'none', '키링': 'none', '표시': 'Y', '수정일': '2026-10-17 22:00' }
+    ];
+    // 퇴근 미션 기록 예시: 김예시 10/6~10/17 매일 수업 미션 12번(첫 도전 만점 6번) + 연습 4번(40문제), 박테스트 3번, 원외생 1번
+    var QZ = [];
+    for (var d = 6; d <= 17; d++) QZ.push(['2026-10-' + ('0' + d).slice(-2) + ' 21:1' + (d % 10), 'KM482919', '김예시', '화목반', '경제 ' + (d - 5) + '회', (d % 2 ? '10' : '8') + '/10', '1']);
+    for (var k = 0; k < 4; k++) QZ.push(['2026-10-1' + k + ' 23:00', 'KM482919', '김예시', '연습', '연습 · 일본 지리', '7/10', '2']);
+    QZ.push(['2026-10-13 21:20', 'BD774119', '박테스트', '화목반', '경제 8회', '10/10', '1'], ['2026-10-15 21:20', 'BD774119', '박테스트', '화목반', '경제 9회', '9/10', '2'],
+      ['2026-10-17 21:20', 'BD774119', '박테스트', '화목반', '경제 10회', '10/10', '1'], ['2026-10-17 21:25', '', '손님', '원외생', '연습 · 세계', '5/10', '1']);
+    T['퀴즈기록'] = QZ.map(function (q) { return { '시각': q[0], '번호': q[1], '이름': q[2], '반': q[3], '범위': q[4], '첫시도정답': q[5], '시도횟수': q[6] }; });
+    // 접속기록 예시: 김예시 10/18·10/19 로그인 → 퇴근 미션 날과 이어져 14일 연속
+    ['2026-10-18 20:05', '2026-10-19 21:40'].forEach(function (t) { env._log.push({ '시각': t, '번호': 'KM482919', '이름': '김예시', '구분': '로그인', '기기': 'demo' }); });
     return env;
   }
 
   var env = null;
   function api(action, payload) {
-    if (!env) env = seed(createEnv());
+    if (!env) {
+      env = seed(createEnv());
+      // 미리보기 주소에 ?unlock 이 있으면 서버 설정 CHAR_UNLOCK_ALL=Y 처럼 모든 아이템을 가진 것으로
+      try { if (typeof location !== 'undefined' && /[?&]unlock\b/.test(location.search)) env._props.CHAR_UNLOCK_ALL = 'Y'; } catch (e) { /* 그냥 둠 */ }
+    }
     return new Promise(function (res) { setTimeout(function () { res(L.handle(env, action, payload)); }, 120); });
   }
   function imageUrl(id) { return env && env._images[id] ? env._images[id] : ''; }

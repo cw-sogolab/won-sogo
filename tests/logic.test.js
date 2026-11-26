@@ -768,4 +768,106 @@ t('QnA·커리큘럼 쓰기 요청은 WRITES(서버 잠금) 목록에 있음, �
   ['curriculum', 'qnaList', 'qnaPhoto', 'qnaAdminList', 'qnaAdminPhoto'].forEach(a => assert.ok(!Logic.WRITES.includes(a), a));
   assert.deepStrictEqual(Logic.TABLES['질문'], ['질문ID', '번호', '과목', '제목', '내용', '공개', '작성일', '상태', '답변', '답변일', '사진', '답변사진']);
 });
+
+console.log('몽글이 꾸미기 (charGet·charSet)');
+const DESIGN_ITEMS = (() => {   // docs/dev/DESIGN.md 2번 아이템 표 → [kind, id, grade]
+  const out = [];
+  fs.readFileSync(path.join(__dirname, '../docs/dev/DESIGN.md'), 'utf8').split('\n').forEach(l => {
+    const m = /^\|\s*(body|hat|glasses|charm)\s*\|([^|]+)\|([^|]+)\|\s*(basic|hip|rare)\s*\|/.exec(l); if (!m) return;
+    const ids = m[2].split('·').map(x => x.trim()), names = m[3].split('·').map(x => x.trim());
+    ids.forEach((id, i) => out.push([m[1], id, m[4], names[i]]));
+  });
+  return out;
+})();
+const pick = (items, kind, id) => items.find(x => x.kind === kind && x.id === id);
+t('아이템 목록이 DESIGN.md 표와 id·kind·grade·이름까지 같음, 캐릭터 표 열', () => {
+  assert.strictEqual(DESIGN_ITEMS.length, 24);
+  assert.deepStrictEqual(Logic.CHAR_ITEMS.map(x => [x.kind, x.id, x.grade, x.name]), DESIGN_ITEMS);
+  assert.ok(Logic.CHAR_ITEMS.filter(x => x.grade !== 'basic').every(x => x.cond && x.stat && x.goal > 0), 'hip·rare 는 조건이 하나씩');
+  assert.deepStrictEqual(Logic.TABLES['캐릭터'], ['번호', '몸', '모자', '안경', '키링', '표시', '수정일']);
+  assert.ok(Logic.WRITES.includes('charSet') && !Logic.WRITES.includes('charGet'));
+  assert.ok(!Logic.TABLES['퀴즈기록'] && Logic.READONLY['퀴즈기록'], '퀴즈기록은 읽기 전용 표');
+});
+t('charGet: 기록으로 계산한 얻은 아이템·진행·별 (출석 = 접속기록 ∪ 퇴근 미션 날, 연습·원외생·남의 기록 제외)', () => {
+  const { R, tokOf } = qEnv(), tok = tokOf('KM482919');   // 로그인(10/20)도 접속기록에 한 줄 → 10/6~10/20 15일 연속
+  const r = R('charGet', { tok }); assert.ok(r.ok, r.error);
+  const d = r.data;
+  assert.deepStrictEqual(d.state, { body: 'mint', hat: 'cap', glasses: 'round', charm: 'star' }); assert.strictEqual(d.show, true);
+  assert.strictEqual(d.items.length, 24);
+  const own = d.items.filter(x => x.owned && x.grade !== 'basic').map(x => x.kind + ':' + x.id);
+  assert.deepStrictEqual(own, ['body:mint', 'body:sky', 'hat:beanie', 'glasses:sun', 'charm:heart']);
+  assert.ok(d.items.filter(x => x.grade === 'basic').every(x => x.owned && x.progress === null && x.cond === '처음부터'));
+  assert.deepStrictEqual(pick(d.items, 'body', 'sky').progress, { now: 7, goal: 7 }, '연속 출석은 목표에서 멈춤');
+  assert.deepStrictEqual(pick(d.items, 'hat', 'headphone').progress, { now: 12, goal: 30 }, '수업 퇴근 미션 12번(연습 4번은 빼고)');
+  assert.deepStrictEqual(pick(d.items, 'glasses', 'square').progress, { now: 6, goal: 20 }, '첫 도전 만점 6번');
+  assert.deepStrictEqual(pick(d.items, 'charm', 'bolt').progress, { now: 40, goal: 100 }, '연습 문제 수');
+  assert.deepStrictEqual(pick(d.items, 'charm', 'chain').progress, { now: 15, goal: 30 }, '출석한 날 수');
+  assert.deepStrictEqual(pick(d.items, 'hat', 'hood').progress, { now: 2, goal: 10 }, '숙제 기한 내 2번(H1·H2)');
+  assert.deepStrictEqual(pick(d.items, 'glasses', 'star').progress, { now: 72.5, goal: 80 }, '월말 29/40');
+  assert.strictEqual(pick(d.items, 'glasses', 'star').cond, '월말테스트 80% 이상');
+  assert.strictEqual(d.star, 5 * 10 + 6 * 2, '별 = 얻은 아이템 5 × 10 + 통과 6 × 2');
+  const b = R('charGet', { tok: tokOf('BD774119') }).data;   // 퇴근 미션 3번(만점 2번) + 늦게 낸 숙제 2개
+  assert.deepStrictEqual(pick(b.items, 'hat', 'beanie').progress, { now: 3, goal: 10 }); assert.deepStrictEqual(pick(b.items, 'hat', 'hood').progress, { now: 0, goal: 10 }, '늦게 낸 숙제는 안 셈');
+  assert.deepStrictEqual(b.state, { body: 'lavender', hat: 'cap', glasses: 'none', charm: 'none' });
+  const n = R('charGet', { tok: tokOf('NP882013') }).data;   // 캐릭터 줄 없음 → 기본 모습, 켜짐
+  assert.deepStrictEqual(n.state, Logic.CHAR_DEFAULT); assert.strictEqual(n.show, true);
+  assert.strictEqual(R('charGet', { tok: tokOf('TR520615') }).data.show, false, '끈 학생');
+  assert.ok(R('charGet', {}).needLogin && R('charSet', { tok: 'nope', body: 'peach' }).needLogin, '열쇠 없으면 다시 로그인');
+});
+t('charGet: 성적 조건 — 소테스트 만점(기출·입력 오타 제외)·월말 80/95%·지난달보다 +10점', () => {
+  const { T, R, tokOf } = qEnv(), tok = tokOf('KM482919');
+  T['시험'].push({ '시험ID': 'X1', '반코드': 'GN-HM', '월': '2026-09', '종류': '월말테스트', '이름': '정치 월말', '문항수': 40, '정답': '1'.repeat(40), '시험일': '2026-09-30', '등록일': '' },
+    { '시험ID': 'X2', '반코드': 'GN-HM', '월': '2026-10', '종류': '소테스트', '이름': '경제 4주차', '문항수': 15, '정답': '1'.repeat(15), '시험일': '2026-10-19', '등록일': '' },
+    { '시험ID': 'X3', '반코드': 'DP-SS', '월': '2026-10', '종류': '소테스트', '이름': '경제 EJU 기출', '문항수': 12, '정답': '1'.repeat(12), '시험일': '2026-10-19', '등록일': '' },
+    { '시험ID': 'X4', '반코드': 'GN-HM', '월': '2026-10', '종류': '소테스트', '이름': '경제 5주차', '문항수': 15, '정답': '1'.repeat(15), '시험일': '2026-10-19', '등록일': '' });
+  const res = (id, sc) => ({ '시험ID': id, '번호': 'KM482919', '답안': '', '맞은개수': sc, '틀린번호': '', '환산점수': '', '입력일': '2026-10-19 22:00' });
+  T['시험결과'].push(res('X1', 24), res('X2', 15), res('X3', 12), res('X4', 16));   // 9월 월말 60점 → 10월 72.5점(+12.5), 만점은 X2 하나만
+  let d = R('charGet', { tok }).data;
+  assert.ok(pick(d.items, 'body', 'butter').owned, '소테스트 만점'); assert.deepStrictEqual(pick(d.items, 'charm', 'sakura').progress, { now: 1, goal: 5 }, '기출·오타는 안 셈');
+  assert.ok(pick(d.items, 'charm', 'fuji').owned && pick(d.items, 'charm', 'fuji').progress.now === 10, '지난달보다 +12.5점');
+  assert.ok(!pick(d.items, 'glasses', 'star').owned && !pick(d.items, 'hat', 'crown').owned);
+  T['시험결과'].find(r => r['시험ID'] === 'E4' && r['번호'] === 'KM482919')['맞은개수'] = 38;   // 95%
+  d = R('charGet', { tok }).data;
+  assert.ok(pick(d.items, 'glasses', 'star').owned && pick(d.items, 'hat', 'crown').owned, '월말 95%');
+  assert.strictEqual(d.star, 9 * 10 + 6 * 2);
+});
+t('charSet: 얻은 것만 입기·없는 아이템 거절·빠진 칸 유지·끄기/켜기 저장·입고 있던 것은 그대로 둘 수 있음', () => {
+  const { T, R, tokOf } = qEnv(), tok = tokOf('KM482919');
+  const row = () => T['캐릭터'].find(r => r['번호'] === 'KM482919');
+  let r = R('charSet', { tok, body: 'sky', hat: 'beanie', glasses: 'sun', charm: 'heart' });
+  assert.ok(r.ok, r.error); assert.deepStrictEqual(r.data, { state: { body: 'sky', hat: 'beanie', glasses: 'sun', charm: 'heart' }, show: true });
+  assert.deepStrictEqual([row()['몸'], row()['모자'], row()['안경'], row()['키링'], row()['표시'], row()['수정일']], ['sky', 'beanie', 'sun', 'heart', 'Y', '2026-10-20 12:00']);
+  r = R('charSet', { tok, hat: 'crown' }); assert.ok(!r.ok); assert.strictEqual(r.error, '아직 얻지 못한 아이템이에요');
+  assert.strictEqual(row()['모자'], 'beanie', '거절되면 저장 안 함');
+  assert.ok(!R('charSet', { tok, hat: 'tophat' }).ok && !R('charSet', { tok, body: 'none' }).ok, '없는 아이템·종류에 없는 id');
+  assert.ok(!R('charSet', { tok, glasses: 'star' }).ok, '별 키링(basic)이 있어도 별 안경(rare)은 따로');
+  r = R('charSet', { tok, show: false }); assert.ok(r.ok); assert.strictEqual(r.data.show, false); assert.strictEqual(r.data.state.hat, 'beanie', '빠진 칸은 그대로');
+  assert.strictEqual(row()['표시'], 'N'); assert.strictEqual(R('charGet', { tok }).data.show, false);
+  assert.strictEqual(R('charSet', { tok, body: 'peach' }).data.show, false, 'show 를 안 보내면 그대로');
+  assert.strictEqual(R('charSet', { tok, show: true }).data.show, true);
+  row()['모자'] = 'crown';   // (예: 시험용 전부 열기 때 입은 것)
+  r = R('charSet', { tok, show: false }); assert.ok(r.ok, '지금 입고 있는 것은 얻지 못했어도 그대로 둘 수 있음'); assert.strictEqual(r.data.state.hat, 'crown');
+  assert.ok(R('charSet', { tok, hat: 'cap' }).ok); assert.ok(!R('charSet', { tok, hat: 'crown' }).ok, '한 번 벗으면 다시 못 입음');
+  const nt = tokOf('NP882013'), n0 = T['캐릭터'].length;
+  assert.ok(R('charSet', { tok: nt, body: 'peach' }).ok); assert.strictEqual(T['캐릭터'].length, n0 + 1, '줄이 없으면 새로 만듦');
+  assert.deepStrictEqual(R('charGet', { tok: nt }).data.state, { body: 'peach', hat: 'none', glasses: 'none', charm: 'none' });
+});
+t('charSet: 바뀐 게 없으면 저장 안 함, 1분에 30번까지', () => {
+  const { T, R, tokOf } = qEnv(), tok = tokOf('KM482919');
+  const before = JSON.stringify(T['캐릭터']);
+  assert.ok(R('charSet', { tok, body: 'mint' }).ok); assert.strictEqual(JSON.stringify(T['캐릭터']), before, '같은 모습이면 수정일도 그대로');
+  let last; for (let i = 0; i < 31; i++) last = R('charSet', { tok, body: i % 2 ? 'mint' : 'peach' });
+  assert.ok(!last.ok && /1분/.test(last.error));
+});
+t('CHAR_UNLOCK_ALL=Y: 모든 아이템 owned, 조건·진행·별은 규칙대로, 입기도 됨', () => {
+  const { e, R, tokOf } = qEnv(), tok = tokOf('KM482919');
+  const a = R('charGet', { tok }).data;
+  e._props.CHAR_UNLOCK_ALL = 'Y';
+  const b = R('charGet', { tok }).data;
+  assert.ok(b.items.every(x => x.owned)); assert.strictEqual(b.star, a.star, '별은 그대로');
+  assert.deepStrictEqual(b.items.map(x => [x.cond, x.progress]), a.items.map(x => [x.cond, x.progress]));
+  assert.ok(R('charSet', { tok, hat: 'crown', glasses: 'star', charm: 'sakura', body: 'butter' }).ok);
+  e._props.CHAR_UNLOCK_ALL = 'N';
+  assert.ok(!R('charGet', { tok }).data.items.every(x => x.owned));
+});
 console.log(`\n${passed} passed` + (process.exitCode ? ', 실패 있음' : ''));

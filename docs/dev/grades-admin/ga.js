@@ -89,16 +89,20 @@
     /** 위쪽에 붙어 있는 메뉴 줄 높이만큼 비우고 그 요소를 맨 위로 */
     function scrollToEl(el) {
       if (!el) return;
-      var top = $('#ga-top'), off = (top ? top.offsetHeight : 0) + 8, s = scroller();
+      var top = $('#ga-top'), s = scroller();
+      var off = (top && top.offsetWidth < root.offsetWidth / 2 ? 0 : (top ? top.offsetHeight : 0)) + 8;   // 넓은 화면에선 메뉴가 왼쪽 옆줄이라 위를 가리지 않음
       if (s) s.scrollTop = s.scrollTop + el.getBoundingClientRect().top - s.getBoundingClientRect().top - off;
       else window.scrollTo(0, el.getBoundingClientRect().top + window.scrollY - off);
     }
-    function mascot(id, size, cls) {
-      try { if (window.HubMascots) { window.HubMascots.mount(); return window.HubMascots.svg(id, size, cls || 'hm-float'); } } catch (e) { /* 그림 없이 */ }
+    /** 업무 화면이라 그림은 넣지 않음 (불러오는 중·오류 자리는 글자만) — 옛 호출 자리는 그대로 두고 빈 글자를 돌려줌 */
+    function mascot() { return ''; }
+    /** 작은 몽글이: 빈 화면·완료 안내에만 (2026-11-26 디자인 계약). window.HubMongle 이 아직 없으면(로드 순서) 빈 자리 */
+    function mongle(size, expr) {
+      try { if (window.HubMongle) { window.HubMongle.mount(); return window.HubMongle.svg(undefined, size, { expr: expr || 'base', anim: false, shadow: false }); } } catch (e) { /* 그림 없이 */ }
       return '';
     }
     /** 빈 화면 안내 (캐릭터는 이런 자리에만) */
-    function blank(text, id) { return '<div class="ga-blank">' + (mascot(id || 'm-note', 84) ? '<div class="ga-mas">' + mascot(id || 'm-note', 84) + '</div>' : '') + '<p>' + text + '</p></div>'; }
+    function blank(text) { var m = mongle(56); return '<div class="ga-blank">' + (m ? '<div class="ga-mas">' + m + '</div>' : '') + '<p>' + text + '</p></div>'; }
 
     /* ---------- 공용 계산 코드·라이브러리 (처음 쓸 때 불러옴) ---------- */
     var LIBS = { core: ['Core', 'core.js'], logic: ['Logic', 'logic.js'], plan: ['Plan', 'plan.js'], monthxlsx: ['MonthXlsx', 'monthxlsx.js'],
@@ -160,14 +164,17 @@
     /* ---------- 틀 ---------- */
     root.classList.add('ga');
     root.innerHTML =
-      '<div class="ga-main">' +
-        '<div class="demo ga-demo" id="ga-demo" hidden>미리보기 모드예요. 예시 데이터이고, 새로고침하면 처음 상태로 돌아가요.</div>' +
-        '<div class="ga-top" id="ga-top" hidden><nav id="ga-nav" class="main" role="tablist" aria-label="관리 메뉴"></nav>' +
+      // 넓은 칸(1000px~)이면 메뉴가 왼쪽 옆줄, 좁으면 위쪽 가로 줄 (ga.css 의 @container)
+      '<div class="ga-main"><div class="ga-shell">' +
+        '<div class="ga-top" id="ga-top" hidden><p class="ga-brand" aria-hidden="true"><i></i>강사 화면</p><nav id="ga-nav" class="main" role="tablist" aria-label="관리 메뉴"></nav>' +
           '<div class="ga-month"><label for="ga-month" class="sr">달</label><select id="ga-month" class="pillsel"></select></div></div>' +
-        '<div id="ga-warns"></div>' +
-        '<section id="ga-period" class="period" hidden></section>' +
-        '<section id="ga-view"></section>' +
-      '</div>' +
+        '<div class="ga-body">' +
+          '<div class="demo ga-demo" id="ga-demo" hidden>미리보기 모드예요. 예시 데이터이고, 새로고침하면 처음 상태로 돌아가요.</div>' +
+          '<div id="ga-warns"></div>' +
+          '<div class="ga-head"><h1 id="ga-h" class="ga-h"></h1><section id="ga-period" class="period" hidden></section></div>' +
+          '<section id="ga-view"></section>' +
+        '</div>' +
+      '</div></div>' +
       '<div id="ga-ovs"></div>';   // 팝업(사진 보기·빠른 검사)은 container-type 칸 밖에 — 안에 있으면 position:fixed 가 그 칸 기준이 됨
     if (demo) $('#ga-demo').hidden = false;
 
@@ -321,6 +328,7 @@
     $('#ga-month').innerHTML = Object.keys(m).filter(Boolean).sort().reverse().map(function (x) { return '<option value="' + x + '"' + (x === month ? ' selected' : '') + '>' + UI.monthLabel(x) + '</option>'; }).join('');
   }
   function renderNav() {
+    $('#ga-h').textContent = (TABS.filter(function (t) { return t[0] === tab; })[0] || ['', ''])[1];
     $('#ga-nav').innerHTML = TABS.map(function (t) { return '<button type="button" role="tab" data-t="' + t[0] + '" aria-selected="' + (t[0] === tab) + '">' + t[1] + '</button>'; }).join('');
     all('#ga-nav button').forEach(function (b) { b.onclick = function () { tab = b.getAttribute('data-t'); renderNav(); render(); }; });
   }
@@ -1119,7 +1127,7 @@
     function draw() {
       var body = $('#ga-rvBody', ov);
       if (i >= list.length) {
-        body.innerHTML = '<div class="rvdone"><div class="ga-mas">' + mascot('m-party', 96, 'hm-bounce') + '</div><b>다 봤어요</b><p class="meta">' + esc(clsShort(hw.cls) + ' · ' + hw.label) + ' — 이번에 확인 ' + okN + '명' +
+        body.innerHTML = '<div class="rvdone">' + (mongle(72, 'happy') ? '<div class="ga-mas">' + mongle(72, 'happy') + '</div>' : '') + '<b>다 봤어요</b><p class="meta">' + esc(clsShort(hw.cls) + ' · ' + hw.label) + ' — 이번에 확인 ' + okN + '명' +
           (list.length - list.filter(function (x) { return x.u.checked; }).length ? ', 건너뛴 ' + (list.length - list.filter(function (x) { return x.u.checked; }).length) + '명' : '') + '</p>' +
           '<div class="rvbtns">' + (list.length ? '<button type="button" class="btn sub" id="ga-rvBack">← 처음부터 다시</button>' : '') + '<button type="button" class="btn" id="ga-rvClose">닫기</button></div></div>';
         $('#ga-rvClose', ov).onclick = close; $('#ga-rvClose', ov).focus();
@@ -1257,7 +1265,7 @@
     var list = (stuFilter === 'cur' ? cur : D.students).slice().sort(function (a, b) { return a.name.localeCompare(b.name, 'ko'); });
     $('#ga-view').innerHTML =
       '<div class="card"><h2>월초 명단 붙여넣기</h2><p class="meta">aca2000에서 복사한 이름과 반을 한 줄에 하나씩 붙여넣으세요. 이름과 반은 탭이나 쉼표로 나뉩니다. 반이 여러 개면 / 로 이어 쓰세요. 반은 이름·시간(예: 화목 20:20)으로 찾습니다.<br>' +
-      '이름은 <b>원생명단</b>(퇴실퀴즈와 같이 쓰는 명단)에서 찾아 그 번호를 쓰고, 명단에 없는 이름만 새 번호를 만들어 원생명단에 추가합니다.</p>' +
+      '이름은 <b>원생명단</b>(퇴근 미션과 같이 쓰는 명단)에서 찾아 그 번호를 쓰고, 명단에 없는 이름만 새 번호를 만들어 원생명단에 추가합니다.</p>' +
       '<p class="meta" style="margin-top:10px"><b>캡처로 넣기</b> — aca2000 「출석 체크」 화면(맨 위에 [11월]반 이름이 보이게)을 캡처해 올리면 이름과 반을 읽어 아래 칸에 채웁니다. 반마다 한 장씩, 여러 장 한꺼번에 올려도 됩니다. 사진에서 읽은 글이라 <b>이름 오타를 꼭 확인</b>한 뒤 반영하세요.</p>' +
       '<input type="file" id="ga-ocrIn" accept="image/*" multiple aria-label="출석 체크 캡처 올리기"><div id="ga-ocrOut"></div>' +
       '<textarea id="ga-paste" class="paste" aria-label="명단" placeholder="홍길동(동작)&#9;개념반 화목 20:20&#10;김하나(분당)&#9;단풀 토일13:00/실전문풀 D"></textarea>' +
@@ -1280,7 +1288,7 @@
         }
         return row;
       }).join('') : '<tr><td colspan="6" class="empty">' + (stuFilter === 'cur' ? '이번 달 수강생이 없어요. 위에 명단을 붙여넣어 주세요.' : '원생명단이 비어 있어요.') + '</td></tr>') +
-      '</tbody></table></div><p class="meta" style="margin-top:8px">번호는 퇴실퀴즈와 같은 원생명단에서 관리합니다. 학생 이용을 막으려면 원생명단 시트의 「상태」 칸에 「차단」이라고 적으세요. 번호를 잊은 학생에게는 이 표의 번호를 다시 알려 주면 됩니다.</p><p id="ga-sMsg" class="msg" role="status"></p></div>' +
+      '</tbody></table></div><p class="meta" style="margin-top:8px">번호는 퇴근 미션과 같은 원생명단에서 관리합니다. 학생 이용을 막으려면 원생명단 시트의 「상태」 칸에 「차단」이라고 적으세요. 번호를 잊은 학생에게는 이 표의 번호를 다시 알려 주면 됩니다.</p><p id="ga-sMsg" class="msg" role="status"></p></div>' +
       '<div class="card"><h2>반 목록</h2><p class="meta">반 이름·시간은 기록장 구글 시트의 「반」 탭에서 고칩니다. 반코드는 바꾸지 마세요.</p><div class="tw" style="margin-top:8px"><table><thead><tr><th>반코드</th><th>반 이름</th><th>종류</th><th>요일·시간</th><th class="num">학생</th></tr></thead><tbody>' +
       D.classes.map(function (c) { return '<tr><td class="code">' + esc(c.code) + '</td><td>' + esc(clsName(c.code)) + '</td><td>' + esc(c.kind) + '</td><td>' + esc(c.time) + '</td><td class="num">' + members(c.code).length + '</td></tr>'; }).join('') + '</tbody></table></div></div>';
     all('#ga-view [data-f]').forEach(function (b) { b.onclick = function () { stuFilter = b.getAttribute('data-f'); editing = ''; vStu(); }; });
@@ -1675,7 +1683,7 @@
       root.innerHTML = ''; root.classList.remove('ga');
       if (typeof opts.onPending === 'function' && lastPending > 0) { try { opts.onPending(0); } catch (e) { /* 무시 */ } }
     }
-    (window.HubMascots ? Promise.resolve() : loadScript(assets + 'mascots.js').catch(function () { })).then(function () {
+    Promise.resolve().then(function () {
       if (dead) return;
       showLoading();
       return ensure(['core', 'logic']);

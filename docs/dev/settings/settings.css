@@ -1,0 +1,45 @@
+/* 설정 — 시안 sian-final ⑨ (.settings 아래로만). 색은 ds.css 토큰만. 공용 조각은 home.css 의 .hub-ui */
+.settings{height:100%;overflow:auto;-webkit-overflow-scrolling:touch;background:var(--bg)}
+.settings .st-in{max-width:560px;margin:0 auto;padding-bottom:32px}
+.settings .st-bar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:16px 20px 4px;min-height:58px}
+.settings .st-bar .ttl{margin:0;font-size:22px;font-weight:800;letter-spacing:-.03em;text-align:center;flex:1}
+.settings .st-me{min-height:76px;margin:8px 16px 0;padding:0 16px;display:flex;align-items:center;gap:12px}
+.settings .st-me .ch{width:50px;flex:none;line-height:0;display:flex;justify-content:center}
+.settings .st-me .tx{flex:1;min-width:0}
+.settings .st-me b{display:block;font-size:17px;font-weight:800;line-height:22px}
+.settings .st-me small{display:block;font-size:12.5px;color:var(--sub);line-height:18px}
+.settings .st-me .go{height:34px;font-size:13px;border-radius:12px}
+.settings .st-h{height:26px;margin:16px 24px 0;font-size:13px;font-weight:800;color:var(--sub);display:flex;align-items:flex-end}
+.settings .st-c{margin:6px 16px 0;padding:4px 16px}
+.settings .srow{display:flex;align-items:center;gap:12px;min-height:60px;border-top:1.5px solid var(--line);width:100%;text-align:left}
+.settings .srow:first-child{border-top:0}
+.settings .srow .tx{flex:1;min-width:0}
+.settings .srow .tx b{display:block;font-size:15px;font-weight:800;line-height:21px}
+.settings .srow .tx small{display:block;font-size:12px;color:var(--sub);line-height:17px}
+.settings .srow.tall{min-height:88px}
+.settings .srow.out .tx b{color:var(--warn)}
+.settings .srow .arr{font-size:22px;color:var(--sub);line-height:1}
+.settings .sw{position:relative;width:52px;height:32px;border-radius:16px;background:var(--track);flex:none;box-shadow:inset 0 2px 4px rgba(76,62,160,.2);transition:background .2s}
+.settings .sw::after{content:"";position:absolute;left:3px;top:3px;width:26px;height:26px;border-radius:50%;background:#fff;box-shadow:0 3px 6px rgba(30,27,58,.3);transition:transform .22s var(--spring)}
+.settings .sw[aria-checked="true"]{background:var(--pt)}
+.settings .sw[aria-checked="true"]::after{transform:translateX(20px)}
+.settings .sw:disabled{opacity:.6}
+.settings .sw:focus-visible,.settings .seg3 button:focus-visible{outline:2px solid var(--pt);outline-offset:2px}
+.settings .seg3{display:flex;gap:3px;background:var(--track);border-radius:12px;padding:3px;flex:none}
+.settings .seg3 button{height:30px;padding:0 10px;border-radius:9px;font-size:12.5px;font-weight:700;color:var(--sub);transition:transform .16s var(--spring)}
+.settings .seg3 button:active{transform:scale(.95)}
+.settings .seg3 button[aria-pressed="true"]{background:var(--card);color:var(--ink);font-weight:800;box-shadow:0 3px 8px -4px rgba(76,62,160,.4)}
+.settings .st-pv{min-height:92px;margin:6px 16px 0;padding:12px 14px;display:flex;align-items:center;gap:10px}
+.settings .st-pv>div{flex:1;display:flex;align-items:center;gap:8px;border-radius:18px;background:var(--bg);height:68px;padding:0 10px;min-width:0}
+.settings .st-pv>div.on{box-shadow:0 0 0 2px var(--pt)}
+.settings .st-pv .ch{width:42px;flex:none;line-height:0;display:flex;justify-content:center}
+.settings .st-pv b{font-size:13px;font-weight:800;line-height:18px;display:block}
+.settings .st-pv small{font-size:11px;color:var(--sub);line-height:15px;display:block}
+.settings .st-note{margin:8px 24px 0;font-size:12px;color:var(--sub)}
+.settings .st-err{min-height:20px;margin:10px 24px 0;font-size:13px;font-weight:700;color:var(--warn)}
+.settings .st-load{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;min-height:50vh;color:var(--sub);font-size:14px}
+.settings .st-spin{width:28px;height:28px;border-radius:50%;border:3px solid var(--track);border-top-color:var(--pt);animation:stSpin .9s linear infinite}
+@keyframes stSpin{to{transform:rotate(360deg)}}
+@media (min-width:900px){.settings .st-in{padding-top:12px}}
+@media (max-width:360px){.settings .seg3 button{padding:0 7px}}
+@media (prefers-reduced-motion:reduce){.settings .sw::after,.settings .st-spin{transition:none;animation:none}}

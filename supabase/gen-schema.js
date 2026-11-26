@@ -14,7 +14,7 @@ const emit = (name, cols) => {
     cols.map(c => `  ${q(c)} text not null default ''`).join(',\n') + `\n);\nalter table public.${q(name)} enable row level security;\n\n`;
 };
 // 나중에 늘린 표는 001 에 넣지 않고 따로 마이그레이션 파일로 (이미 서울에 실행한 001 은 그대로 둠). 표 이름 → 파일
-const LATER = { '질문': '002_qna.sql' };
+const LATER = { '질문': '002_qna.sql', '캐릭터': '003_char.sql' };
 Object.keys(Logic.TABLES).forEach(t => { if (!LATER[t]) emit(t, Logic.TABLES[t]); });
 emit('접속기록', Logic.ACCESS_HEAD);
 sql += `-- 퇴실퀴즈 기록 (구글 폼 7칸 + 시각·번호·판)
@@ -51,6 +51,16 @@ sql = `-- 成績ノート QnA: 「질문」 표 (gen-schema.js 가 만든 파일
 -- RLS 를 켜고 정책을 두지 않음 → 브라우저(anon 키)로는 못 읽고 Edge Function(서버)만 읽고 씁니다. 질문 사진은 001 에서 만든 비공개 버킷 hw-photos 의 QNA/ 폴더에 둠.
 
 `;
-Object.keys(LATER).forEach(t => emit(t, Logic.TABLES[t]));
+emit('질문', Logic.TABLES['질문']);
 fs.writeFileSync(path.join(__dirname, 'migrations', '002_qna.sql'), sql);
-console.log('migrations/002_qna.sql', Object.keys(LATER).join(','));
+console.log('migrations/002_qna.sql', '질문');
+// 003 — 몽글이 꾸미기 (2026-11-26): 「캐릭터」 표만. 001·002 를 실행한 DB 에 SQL Editor 로 한 번 실행 (다시 실행해도 됨)
+sql = `-- 成績ノート 몽글이 꾸미기: 「캐릭터」 표 (gen-schema.js 가 만든 파일 — 직접 고치지 말고 logic.js 의 TABLES 를 고친 뒤 다시 만듭니다).
+-- 001·002 를 이미 실행한 DB 에 이어서 한 번 실행. 다시 실행해도 됩니다(if not exists). 서버(Edge Function)를 새로 배포하기 전에 먼저!
+-- (서버는 요청마다 Logic.TABLES 의 표를 한 번에 읽어서, 이 표가 없으면 모든 요청이 실패합니다.)
+-- 학생마다 한 줄(번호). 얻은 아이템은 저장하지 않고 기록으로 계산합니다. RLS 를 켜고 정책을 두지 않음 → Edge Function(서버)만 읽고 씁니다.
+
+`;
+emit('캐릭터', Logic.TABLES['캐릭터']);
+fs.writeFileSync(path.join(__dirname, 'migrations', '003_char.sql'), sql);
+console.log('migrations/003_char.sql', '캐릭터');

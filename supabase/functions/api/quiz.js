@@ -7,6 +7,25 @@ const base = n => String(n).replace(/\(.*?\)/g, '').replace(/\s+/g, '');
 const mask = n => { const b = base(n); return b.length <= 1 ? b : b.length === 2 ? b[0] + '○' : b[0] + '○'.repeat(b.length - 2) + b[b.length - 1]; };
 const kst = d => new Date(d.getTime() + 9 * 3600e3);                 // KST 로 옮긴 뒤 UTC 값을 읽으면 한국 날짜·요일
 const day = d => kst(d).toISOString().slice(0, 10);
+// 몽글이 꾸미기 (2026-11-26): 「캐릭터」 표 열 ↔ 상태 칸. 기본 모습·아이템 id 는 logic.js 의 CHAR_DEFAULT·CHAR_ITEMS 와 같음 (quiz.js 는 engine.js 를 안 읽어서 여기에 기본값만 둠)
+const CHAR_COL = { body: '몸', hat: '모자', glasses: '안경', charm: '키링' };
+const CHAR_DEFAULT = { body: 'lavender', hat: 'none', glasses: 'none', charm: 'none' };
+const ini = n => Array.from(base(n))[0] || '';
+/** 번호들 → { 번호: {body,hat,glasses,charm} | null(캐릭터를 끔) }. 줄이 없으면 기본 모습. 표가 없으면(003 실행 전) 모두 기본 모습 */
+async function chars(q, ids) {
+  const out = {};
+  ids.forEach(id => { out[id] = Object.assign({}, CHAR_DEFAULT); });
+  if (!ids.length) return out;
+  let rows = [];
+  try { rows = await q('select "번호" no, "몸", "모자", "안경", "키링", "표시" from public."캐릭터" where "번호" = any($1::text[]) order by id', [ids]); } catch (e) { return out; }
+  for (const r of rows) {
+    const id = sidNorm(r.no); if (!(id in out)) continue;
+    if (String(r['표시'] || '').trim() === 'N') { out[id] = null; continue; }
+    const st = {}; Object.keys(CHAR_COL).forEach(k => { st[k] = String(r[CHAR_COL[k]] || '').trim() || CHAR_DEFAULT[k]; });
+    out[id] = st;
+  }
+  return out;
+}
 
 async function roster(q) {
   const R = { ids: {}, base: {}, full: {} };
@@ -49,7 +68,7 @@ export async function rank(q, now = new Date()) {
   const from = weekStart < monthStart ? weekStart : monthStart;
   const rows = await q('select "시각" t, "번호" no, "이름" nm, "반" cls, "범위" setn, "첫시도정답" f, "걸린시간" tm from public."퀴즈기록" where "시각" >= $1::date - 1', [from]);
   const agg = {};
-  const add = (k, key, name, f, qn, t) => { const m = agg[k] || (agg[k] = {}); const x = m[key] || (m[key] = { name, f: 0, q: 0, c: 0, t: 0 }); x.name = name; x.f += f; x.q += qn; x.c++; x.t += t; };
+  const add = (k, key, name, f, qn, t, sid) => { const m = agg[k] || (agg[k] = {}); const x = m[key] || (m[key] = { name, f: 0, q: 0, c: 0, t: 0, sid }); x.name = name; x.f += f; x.q += qn; x.c++; x.t += t; };
   for (const r of rows) {
     const cls = String(r.cls || '').trim(); if (cls === GUEST_CLS) continue;
     const raw = String(r.no || r.nm || '').trim(), mt = match(R, raw) || match(R, r.nm);
@@ -62,20 +81,25 @@ export async function rank(q, now = new Date()) {
     const d = day(new Date(r.t)), f = +m[1], qn = +m[2], t = +r.tm || 0;
     for (const [per, fr] of [['week', weekStart], ['month', monthStart]]) {
       if (d < fr) continue;
-      if (prac) add('prac|' + per, key, name, f, qn, t);
-      else { add('cls|전체|' + per, key, name, f, qn, t); if (cls) add('cls|' + cls + '|' + per, key, name, f, qn, t); }
+      const sid = mt ? mt.id : '';   // 명단에 없는 이름만 온 기록은 캐릭터 없음(null)
+      if (prac) add('prac|' + per, key, name, f, qn, t, sid);
+      else { add('cls|전체|' + per, key, name, f, qn, t, sid); if (cls) add('cls|' + cls + '|' + per, key, name, f, qn, t, sid); }
     }
   }
   const out = { ok: true, at: now.toISOString(), weekStart, monthStart, min: RANK_MIN, lists: {} };
+  const tops = [];
   Object.keys(agg).forEach(k => {
     const prac = k.indexOf('prac|') === 0, all = Object.keys(agg[k]).map(key => agg[k][key]);
     const need = prac ? RANK_MIN.prac : /\|week$/.test(k) ? RANK_MIN.clsWeek : RANK_MIN.clsMonth;
     const ok = all.filter(x => (prac ? x.q : x.c) >= need);
     ok.sort((a, b) => b.f / b.q - a.f / a.q || b.q - a.q || a.t / a.q - b.t / b.q);   // 정답률 → 푼 문항 수 → 문항당 시간
-    const row = x => ({ name: x.name, acc: Math.round(x.f / x.q * 1000) / 10, q: x.q, c: x.c });
+    // char·ini 는 아래에서 한 번에 채움 (char = 캐릭터 상태 또는 null(끈 학생·명단 밖), ini = 이름 첫 글자)
+    const row = x => { const o = { name: x.name, acc: Math.round(x.f / x.q * 1000) / 10, q: x.q, c: x.c, char: null, ini: ini(x.name) }; tops.push([o, x.sid]); return o; };
     out.lists[k] = { n: ok.length, total: all.length, top: ok.slice(0, RANK_TOP).map(row) };
     if (prac) { const qty = all.slice().sort((a, b) => b.q - a.q || b.f / b.q - a.f / a.q); out.lists[k + '|qty'] = { n: qty.length, total: all.length, top: qty.slice(0, RANK_TOP).map(row) }; }
   });
+  const ch = await chars(q, [...new Set(tops.map(t => t[1]).filter(Boolean))]);
+  tops.forEach(([o, sid]) => { o.char = sid && ch[sid] ? Object.assign({}, ch[sid]) : null; });
   return out;
 }
 

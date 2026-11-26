@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>몽글이 미리보기</title>
+<script>
+/* ?theme=dark 로 다크 확인. ?still 이면 움직임 끔(렌더 비교용) */
+(function(){ var q = new URLSearchParams(location.search); var t = q.get('theme');
+  document.documentElement.setAttribute('data-theme', t === 'dark' ? 'dark' : 'light'); })();
+</script>
+<link rel="stylesheet" href="ds.css">
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;padding:24px;background:var(--bg);color:var(--ink);font:500 13px/1.4 var(--f)}
+  h1{font-size:22px;margin:0 0 4px}
+  h2{font-size:15px;margin:22px 0 10px;color:var(--ink)}
+  p.n{margin:0 0 6px;color:var(--sub)}
+  .row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+  .card{background:var(--card);border-radius:20px;box-shadow:var(--sh-s);padding:12px 12px 10px;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:84px}
+  .card b{font-size:12px}
+  .card small{font-size:10.5px;color:var(--sub)}
+  .g-rare{color:#B07B00}.g-hip{color:var(--j-lime-d)}
+  .sizes .card{justify-content:flex-end}
+  .rank{display:flex;gap:10px;align-items:center;padding:12px 16px;border-radius:20px;background:var(--card);box-shadow:var(--sh-s)}
+  .rank.j{background:var(--j-bg)}
+  .rank.j .hm-ini{background:#fff;color:var(--j-bg)}
+  .rank span.no{font:800 14px var(--fn);color:var(--sub);width:14px;text-align:right}
+  .rank.j span.no{color:var(--j-lime)}
+  .ic{width:64px;height:64px;display:grid;place-items:center;border-radius:16px;background:var(--soft)}
+  button{font:800 13px var(--f);padding:10px 16px;border-radius:14px;border:0;background:var(--pt);color:#fff;cursor:pointer}
+  .stage{width:220px;height:220px;display:grid;place-items:center;border-radius:24px;background:var(--hero)}
+</style>
+</head>
+<body>
+<h1>몽글이 · HubMongle</h1>
+<p class="n">docs/dev/assets/mongle.js 미리보기 — 아이템 전부 · 표정 · 크기 24~240 · 이니셜 아바타. 다크: <code>?theme=dark</code></p>
+<div id="out"></div>
+<script src="mongle.js"></script>
+<script>
+(function(){
+  var M = window.HubMongle, out = document.getElementById('out'), h = '';
+  function card(inner, title, sub, cls){ return '<div class="card">' + inner + '<b>' + title + '</b>' + (sub ? '<small class="' + (cls || '') + '">' + sub + '</small>' : '') + '</div>'; }
+  var GR = { rare:'희귀', hip:'힙', basic:'기본' };
+  var hip = { body:'mint', hat:'bucket', glasses:'square', charm:'chain' };
+  var rare = { body:'butter', hat:'crown', glasses:'star', charm:'sakura' };
+  var basic = { body:'lavender', hat:'cap', glasses:'round', charm:'star' };
+
+  h += '<h2>표정 (200px · anim)</h2><div class="row">' +
+    ['base','happy','wow'].map(function(e){ return card('<div class="stage">' + M.svg(basic, 190, { expr:e }) + '</div>', e); }).join('') +
+    card('<div class="stage">' + M.svg(rare, 190, { expr:'happy' }) + '</div>', '희귀 세트', 'butter·crown·star·sakura', 'g-rare') +
+    card('<div class="stage">' + M.svg(hip, 190) + '</div>', '힙 세트', 'mint·bucket·square·chain', 'g-hip') +
+    card('<div class="stage">' + M.svg({ body:'sky', hat:'hood', glasses:'sun', charm:'fuji' }, 190, { expr:'wow' }) + '</div>', '후드·선글라스', 'sky·hood·sun·fuji') + '</div>';
+
+  var SZ = [24, 32, 40, 48, 64, 96, 160, 240];
+  [basic, hip, rare, { body:'peach', hat:'headphone', glasses:'sun', charm:'heart' }].forEach(function(st, i){
+    h += (i ? '' : '<h2>크기 (그림자 켬)</h2>') + '<div class="row sizes" style="margin-bottom:10px">' + SZ.map(function(s){ return card(M.svg(st, s), s + 'px'); }).join('') + '</div>';
+  });
+
+  ['body','hat','glasses','charm'].forEach(function(kind){
+    var list = M.items.filter(function(x){ return x.kind === kind; });
+    h += '<h2>' + kind + ' — 120px · 48px · 32px · 24px · 아이콘</h2><div class="row">' + list.map(function(it){
+      var st = { body:'lavender' }; st[kind] = it.id;
+      if (kind === 'body') st.hat = 'none';
+      return card(M.svg(st, 120, { anim:false }) + '<div class="row" style="gap:6px;align-items:flex-end">' + M.svg(st, 48, { shadow:false }) + M.svg(st, 32, { shadow:false }) + M.svg(st, 24, { shadow:false }) + '</div>' +
+        '<div class="ic">' + M.icon(kind, it.id, 56) + '</div>', it.name + ' <small>' + it.id + '</small>', GR[it.grade], 'g-' + it.grade);
+    }).join('') + '</div>';
+  });
+
+  var people = [rare, hip, basic, null, { body:'peach', hat:'headphone', glasses:'sun', charm:'bolt' }, { body:'sky', hat:'hood', charm:'fuji' }, null, { body:'butter', hat:'beanie', glasses:'round', charm:'heart' }, { body:'mint', glasses:'star' }, { body:'lavender' }];
+  var ini = ['가','나','다','라','마','바','사','아','자','차'];
+  function rankRow(cls, size){ return '<div class="rank ' + cls + '">' + people.map(function(p, i){ return '<span class="no">' + (i + 1) + '</span>' + M.avatar(p, size, { show: p !== null, initial: ini[i] }); }).join('') + '</div>'; }
+  h += '<h2>랭킹 10명 — avatar 36px · 46px (끈 학생 = 이니셜)</h2>' + rankRow('', 36) + '<div style="height:10px"></div>' + rankRow('j', 46);
+
+  h += '<h2>pop (아이템 입히기)</h2><div class="row"><div class="stage" id="popst">' + M.svg(basic, 180) + '</div>' +
+    '<div style="display:flex;flex-direction:column;gap:8px"><button data-p="hat">모자 쏙</button><button data-p="glasses">안경 쏙</button><button data-p="charm">키링 쏙</button><button data-p="">말랑만</button></div></div>';
+  out.innerHTML = h;
+  document.addEventListener('click', function(e){
+    var b = e.target.closest('button[data-p]'); if (!b) return;
+    M.pop(document.getElementById('popst'), b.dataset.p || undefined);
+  });
+  if (location.hash === '#pop') setTimeout(function(){ M.pop(document.getElementById('popst'), 'hat'); }, 300);
+})();
+</script>
+</body>
+</html>

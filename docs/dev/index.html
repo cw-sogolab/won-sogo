@@ -4,165 +4,159 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>[개발판] cw-sogolab</title>
-<meta name="description" content="홈 · 성적 · 퇴실 퀴즈 · 커리큘럼 · QnA — cw-sogolab">
+<meta name="description" content="홈 · 퇴근 미션 · 성적노트 · 수업 · 질문 — cw-sogolab">
 <link rel="icon" href="assets/favicon-dev.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800&display=swap">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<script>
+/* 화면 테마: 설정의 자동·라이트·다크(이 기기 localStorage) → <html data-theme>. 자동이면 기기 설정을 따라감. 바뀌면 window 'hub:theme' (detail={theme,pref}) */
+(function () {
+  var KEY = /\/dev\//.test(location.pathname) ? 'hub-dev.theme' : 'hub.theme', root = document.documentElement, mq = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  function getPref() { var p = null; try { p = localStorage.getItem(KEY); } catch (e) {} return p === 'light' || p === 'dark' ? p : 'auto'; }
+  function apply(pref, fire) {
+    var t = pref === 'light' || pref === 'dark' ? pref : (mq && mq.matches ? 'dark' : 'light'), was = root.getAttribute('data-theme');
+    root.setAttribute('data-theme', t); root.setAttribute('data-theme-pref', pref);
+    if (fire === 'always' || (fire && was !== t)) { try { window.dispatchEvent(new CustomEvent('hub:theme', { detail: { theme: t, pref: pref } })); } catch (e) {} }
+  }
+  window.HubTheme = {
+    get: getPref,
+    current: function () { return root.getAttribute('data-theme') || 'light'; },
+    set: function (pref) { pref = pref === 'light' || pref === 'dark' ? pref : 'auto'; try { if (pref === 'auto') localStorage.removeItem(KEY); else localStorage.setItem(KEY, pref); } catch (e) {} apply(pref, 'always'); }
+  };
+  apply(getPref(), false);
+  if (mq) { var on = function () { if (getPref() === 'auto') apply('auto', true); }; if (mq.addEventListener) mq.addEventListener('change', on); else if (mq.addListener) mq.addListener(on); }
+})();
+</script>
+<!-- 옛 토큰(app.css — 아직 그 이름을 쓰는 모듈용)을 먼저 두고 바로 위에 디자인 토큰 ds.css 를 얹음(같은 이름은 ds 가 이김).
+     아래 <style> 첫 규칙이 옛 이름을 ds 토큰에 이어 붙여, 옛 모듈도 data-theme 를 따라가게 함 -->
 <link rel="stylesheet" href="assets/app.css">
-<link rel="stylesheet" href="qz/quiz.css?v=20261124f">
-<link rel="stylesheet" href="grades-native/gr.css?v=20261124f">
-<link rel="stylesheet" href="home/home.css?v=20261124f">
-<link rel="stylesheet" href="curriculum/cur.css?v=20261124f">
-<link rel="stylesheet" href="qna/qna.css?v=20261124f">
-<link rel="stylesheet" href="grades-admin/ga.css?v=20261124f">
+<link rel="stylesheet" href="assets/ds.css?v=20261126c">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&family=Anton&family=Black+Han+Sans&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="qz/quiz.css?v=20261126c">
+<link rel="stylesheet" href="grades-native/gr.css?v=20261126c">
+<link rel="stylesheet" href="home/home.css?v=20261126c">
+<link rel="stylesheet" href="closet/closet.css?v=20261126c">
+<link rel="stylesheet" href="settings/settings.css?v=20261126c">
+<link rel="stylesheet" href="curriculum/cur.css?v=20261126c">
+<link rel="stylesheet" href="qna/qna.css?v=20261126c">
+<link rel="stylesheet" href="grades-admin/ga.css?v=20261126c">
 <style>
-/* 허브 틀 — 색·글꼴·카드는 성적노트 토큰(app.css :root)을 그대로 씀 */
+/* 옛 토큰 → ds 토큰 (모듈이 ds 로 다 옮기면 지워도 됨) */
+:root[data-theme]{
+  --surface:var(--card); --fill:var(--pt-l); --fill-hover:var(--hover); --ink2:var(--body); --muted:var(--sub); --faint:var(--tabtx);
+  --blue:var(--pt); --blue-press:var(--pt-d); --blue-soft:var(--pt-l); --blue-ink:var(--pt-d); --me:var(--pt);
+  --red:var(--warn); --red-soft:var(--no-b); --green:var(--ok); --green-soft:var(--ok-l); --orange:var(--ing-t); --orange-soft:var(--ing-b);
+  --shadow:var(--sh-s); --btn:var(--pt); --btn-shadow:var(--sh-s); --f-body:var(--f); --f-round:var(--fn);
+}
+/* ── 허브 틀 (시안 sian-final: 흰 카드 · 포인트 블루 · 아래 탭바) ── */
 html,body{height:100%}
-body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:var(--bg);color:var(--ink);font-family:var(--f-body)}
+body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:var(--bg);color:var(--ink);font-family:var(--f);font-weight:600;word-break:keep-all;-webkit-font-smoothing:antialiased;transition:background .25s,color .25s}
+.hub button{font-family:inherit}
 .hub .devbar{flex:none}
-.hub-top{flex:none;display:flex;align-items:center;gap:10px;padding:8px 14px;padding-top:max(8px,env(safe-area-inset-top));background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);border-bottom:1px solid var(--line2);z-index:5}
-.hub-brand{display:flex;align-items:center;gap:8px;font-family:var(--f-round);font-weight:800;font-size:17px;color:var(--ink);text-decoration:none;white-space:nowrap}
-.hub-brand svg{width:30px;height:30px}
-.hub-who{font-size:13px;color:var(--muted);white-space:nowrap;max-width:30vw;overflow:hidden;text-overflow:ellipsis}
-.hub-tabs{margin-left:auto;display:flex;gap:2px;background:var(--surface);border:1px solid var(--line);border-radius:999px;padding:3px;box-shadow:var(--shadow)}
-.hub-tab{position:relative;display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--muted);font:600 14px var(--f-body);padding:5px 12px 5px 8px;border-radius:999px;cursor:pointer;white-space:nowrap}
-.hub-tab svg{width:24px;height:24px;flex:none}
-.hub-tab[aria-selected="true"]{background:var(--blue);color:#fff;box-shadow:0 3px 10px rgba(91,75,240,.3)}
-.hub-tab .bd{position:absolute;right:2px;top:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font:700 11px/18px var(--f-body);text-align:center}
-.hub-out{border:0;background:none;color:var(--muted);font:600 13px var(--f-body);padding:8px 8px;border-radius:10px;cursor:pointer}
-.hub-out:hover{background:var(--fill)}
+.hub-top{flex:none;display:flex;align-items:center;gap:14px;padding:10px 20px;padding-top:max(10px,env(safe-area-inset-top));background:var(--glass);backdrop-filter:saturate(1.6) blur(14px);-webkit-backdrop-filter:saturate(1.6) blur(14px);box-shadow:0 1px 0 var(--line);z-index:5}
+.hub-top[hidden]{display:none!important}
+.hub-brand{display:flex;align-items:center;gap:9px;font-family:var(--fn);font-weight:800;font-size:17px;color:var(--ink);text-decoration:none;white-space:nowrap;letter-spacing:-.01em}
+.hub-brand img{width:32px;height:32px;display:block}
+.hub-brand .dk{display:none}
+:root[data-theme="dark"] .hub-brand .lt{display:none}
+:root[data-theme="dark"] .hub-brand .dk{display:block}
+.hub-who{font-size:13px;color:var(--sub);white-space:nowrap;max-width:30vw;overflow:hidden;text-overflow:ellipsis}
+.hub-tabs{margin-left:auto;display:flex;gap:2px;background:var(--card);border-radius:999px;padding:4px;box-shadow:var(--sh-s)}
+.hub-tab{position:relative;display:flex;align-items:center;gap:6px;border:0;background:none;color:var(--tabtx);font:700 14px var(--f);padding:6px 14px 6px 9px;border-radius:999px;cursor:pointer;white-space:nowrap;transition:transform .16s var(--spring),background .2s,color .2s}
+.hub-tab svg{width:24px;height:24px;flex:none;display:block;overflow:visible}
+.hub-tab:active{transform:scale(.95)}
+.hub-tabs .hub-tab[aria-selected="true"]{background:var(--pt-l);color:var(--pt-d);font-weight:800}
+.hub-tab .bd{position:absolute;right:2px;top:-3px;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--warn);color:#fff;font:800 11px/18px var(--fn);text-align:center}
+.hub-me{width:40px;height:40px;border-radius:14px;border:0;background:var(--card);box-shadow:var(--sh-s);display:grid;place-items:center;cursor:pointer;padding:0;line-height:0;flex:none}
+.hub-me[hidden],.hub-out[hidden]{display:none}
+.hub-out{border:0;background:var(--card);box-shadow:var(--sh-s);color:var(--sub);font:700 13px var(--f);height:36px;padding:0 14px;border-radius:13px;cursor:pointer;flex:none}
+.hub-out:active{transform:translateY(1px)}
 .hub-body{flex:1;min-height:0;position:relative}
 .hub-frame{position:absolute;inset:0;width:100%;height:100%;border:0;background:var(--bg)}
 .hub-frame[hidden]{display:none}
 .hub-pane{position:absolute;inset:0;overflow:auto;-webkit-overflow-scrolling:touch}
 .hub-pane[hidden]{display:none}
-.hub-soon{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--muted);text-align:center;padding:24px}
-.hub-soon b{font-family:var(--f-round);font-size:20px;color:var(--ink)}
-/* 아래 탭바(모바일) — 토스처럼 아이콘 + 짧은 글자 */
-.hub-bar{flex:none;display:none;background:color-mix(in srgb,var(--surface) 94%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);border-top:1px solid var(--line2);padding:4px 6px calc(4px + env(safe-area-inset-bottom));z-index:5}
-.hub-bar .hub-tab{flex:1;flex-direction:column;gap:1px;padding:5px 2px 4px;border-radius:14px;font-size:11.5px;background:none;box-shadow:none;color:var(--faint)}
-.hub-bar .hub-tab svg{width:30px;height:30px}
-.hub-bar .hub-tab[aria-selected="true"]{background:var(--blue-soft);color:var(--blue-ink);box-shadow:none}
-.hub-bar .hub-tab .bd{right:calc(50% - 26px)}
-@media (max-width:760px){.hub-tabs{display:none}.hub-bar{display:flex}.hub-who{display:none}.hub-top{padding-bottom:6px}.hub-out{margin-left:auto}}
-@media (min-width:761px){.hub-brand svg{width:34px;height:34px}}
+.hub-soon{height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--sub);text-align:center;padding:24px}
+.hub-soon b{font-size:20px;font-weight:800;color:var(--ink)}
+/* 아래 탭바 (휴대폰) — 시안 .tabbar */
+.hub-bar{flex:none;display:none;background:var(--card);border-radius:28px 28px 0 0;box-shadow:0 -10px 30px -14px rgba(76,62,160,.28);padding:8px 8px env(safe-area-inset-bottom);z-index:5;position:relative}
+.hub-bar .hub-tab{flex:1;height:60px;flex-direction:column;justify-content:center;gap:3px;padding:0 2px;border-radius:16px;font-size:11px;font-weight:700;color:var(--tabtx)}
+.hub-bar .hub-tab svg{width:26px;height:26px}
+.hub-bar .hub-tab[aria-selected="true"]{color:var(--pt);font-weight:800}
+.hub-bar .hub-tab[aria-selected="true"] svg{filter:drop-shadow(0 3px 3px rgba(91,91,255,.3))}
+.hub-bar .hub-tab .bd{right:calc(50% - 26px);top:2px}
+.hub-bar:empty{display:none!important}
+@media (max-width:760px){
+  .hub-tabs{display:none}.hub-bar{display:flex}.hub-who{display:none}
+  body.hub.hub-stu .hub-top{display:none}             /* 학생 휴대폰: 각 화면이 자기 머리띠를 가짐(홈 톱니 → 설정) */
+  .hub-top{padding:8px 16px;padding-top:max(8px,env(safe-area-inset-top))}.hub-out{margin-left:auto}
+}
 /* 로그인 */
-.hub-login{height:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:28px 18px 40px}
-.hub-hero{position:relative;width:min(340px,86vw);height:190px;margin:4px 0 6px}
-.hub-hero .m{position:absolute;filter:drop-shadow(0 14px 18px rgba(59,47,201,.16))}
-.hub-hero .m1{width:150px;left:10px;top:18px;animation:hubFloat 4.6s ease-in-out infinite}
-.hub-hero .m2{width:132px;right:6px;top:36px;animation:hubFloat 5.4s ease-in-out -1.8s infinite}
-.hub-hero .m3{width:58px;left:150px;top:2px;animation:hubFloat 3.8s ease-in-out -.8s infinite}
-@keyframes hubFloat{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-9px) rotate(2deg)}}
-@media (prefers-reduced-motion:reduce){.hub-hero .m{animation:none}}
-.hub-card{width:min(400px,100%);background:var(--surface);border-radius:var(--r-card);box-shadow:var(--shadow);padding:22px 20px 20px;border:1px solid var(--line2)}
-.hub-card h1{margin:0 0 4px;font-family:var(--f-round);font-size:24px;font-weight:800;letter-spacing:-.01em}
-.hub-card p{margin:0 0 16px;color:var(--muted);font-size:14.5px;line-height:1.5}
-.hub-field{width:100%;box-sizing:border-box;border:2px solid var(--line);background:var(--bg);border-radius:var(--r-ctl);padding:15px 16px;font:700 22px var(--f-mono);letter-spacing:.12em;text-align:center;color:var(--ink);text-transform:uppercase}
+.hub-login{height:100%;overflow:auto;display:flex;flex-direction:column;align-items:center;padding:28px 16px 40px;box-sizing:border-box}
+.hub-login[hidden]{display:none}
+.hub-hero{position:relative;width:min(400px,100%);height:210px;border-radius:28px;background:var(--hero);box-shadow:var(--sh);overflow:hidden;flex:none}
+.hub-hero .ped{position:absolute;left:50%;bottom:16px;width:176px;height:36px;transform:translateX(-50%);border-radius:50%;background:var(--ped);box-shadow:0 7px 0 var(--ped-s),0 22px 22px -8px rgba(76,62,160,.4)}
+.hub-hero .ch{position:absolute;left:50%;bottom:22px;width:150px;margin-left:-75px;line-height:0}
+.hub-hero .ch svg{display:block;width:100%;height:auto;overflow:visible}
+.hub-hero .say{position:absolute;left:14px;top:14px;height:28px;padding:0 12px;border-radius:14px 14px 14px 4px;background:var(--card);font-size:12.5px;font-weight:800;display:flex;align-items:center;box-shadow:var(--sh-s);z-index:1}
+.hub-card{width:min(400px,100%);box-sizing:border-box;background:var(--card);border-radius:28px;box-shadow:var(--sh);padding:22px 20px 18px;margin-top:14px}
+.hub-card h1{margin:0 0 4px;font-size:22px;font-weight:800;letter-spacing:-.03em}
+.hub-card p{margin:0 0 16px;color:var(--sub);font-size:14px;line-height:1.55}
+.hub-card p b{color:var(--ink)}
+.hub-field{width:100%;box-sizing:border-box;border:0;background:var(--soft);box-shadow:inset 0 0 0 2px var(--line);border-radius:18px;padding:15px 16px;font:800 22px var(--fn);letter-spacing:.12em;text-align:center;color:var(--ink);text-transform:uppercase;transition:box-shadow .2s,background .2s}
 .hub-field.pw{text-transform:none;letter-spacing:.04em;font-size:18px}
-.hub-field:focus{outline:0;border-color:var(--blue);background:var(--surface)}
-.hub-go{width:100%;margin-top:12px;border:0;border-radius:var(--r-ctl);padding:15px;background:var(--btn);color:#fff;font:700 17px var(--f-body);box-shadow:var(--btn-shadow);cursor:pointer}
+.hub-field::placeholder{color:var(--tabtx);opacity:.7}
+.hub-field:focus{outline:0;box-shadow:inset 0 0 0 2.5px var(--pt);background:var(--card)}
+.hub-go{display:block;width:100%;height:54px;margin-top:12px;border:0;border-radius:18px;background:var(--pt);color:#fff;font:800 17px var(--f);cursor:pointer;
+  box-shadow:0 12px 20px -10px var(--pt),inset 0 -4px 0 rgba(30,20,160,.28),inset 0 2px 0 rgba(255,255,255,.3);transition:transform .16s var(--spring),box-shadow .16s}
+.hub-go:active{transform:translateY(3px);box-shadow:0 4px 8px -6px var(--pt),inset 0 -1px 0 rgba(30,20,160,.28)}
 .hub-go:disabled{opacity:.55;cursor:default}
-.hub-go:active{transform:translateY(1px)}
-.hub-rem{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--muted);font-size:14px}
-.hub-err{min-height:20px;margin-top:10px;color:var(--red);font-size:14px;font-weight:600;text-align:center}
-.hub-foot{margin-top:18px;color:var(--faint);font-size:12px;display:flex;align-items:center;gap:6px}
-.hub-foot svg{width:16px;height:16px}
+.hub-rem{display:flex;align-items:center;gap:8px;margin-top:12px;color:var(--sub);font-size:14px}
+.hub-rem input{width:18px;height:18px;accent-color:var(--pt)}
+.hub-err{min-height:20px;margin-top:10px;color:var(--warn);font-size:14px;font-weight:700;text-align:center}
+.hub-foot{margin-top:18px;color:var(--tabtx);font-size:12px}
+@media (prefers-reduced-motion:reduce){.hub-tab,.hub-go{transition:none}}
 </style>
 </head>
 <body class="hub">
 
-<!-- 3D 느낌 캐릭터 (SVG: 그라데이션 + 윗면 하이라이트 + 아랫면 그림자 + 눈). 같은 모양을 크기만 바꿔 씀 -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <linearGradient id="gNote" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#A89CFF"/><stop offset="1" stop-color="#5B4BF0"/></linearGradient>
-    <linearGradient id="gQuiz" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB3C8"/><stop offset="1" stop-color="#FF6F93"/></linearGradient>
-    <linearGradient id="gMint" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7DF0CF"/><stop offset="1" stop-color="#0FA382"/></linearGradient>
-    <linearGradient id="gSun" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE38A"/><stop offset="1" stop-color="#FFB02E"/></linearGradient>
-    <linearGradient id="gShade" x1="0" y1="0" x2="0" y2="1"><stop offset=".45" stop-color="#1E1B6A" stop-opacity="0"/><stop offset="1" stop-color="#1E1B6A" stop-opacity=".38"/></linearGradient>
-    <radialGradient id="gGloss" cx=".3" cy=".18" r=".7"><stop offset="0" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
-    <filter id="fBlur" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="3.2"/></filter>
-
-    <!-- 성적노트: 보라 수첩 -->
-    <symbol id="m-note" viewBox="0 0 120 120">
-      <ellipse cx="60" cy="110" rx="34" ry="6.5" fill="#3B2FC9" opacity=".22" filter="url(#fBlur)"/>
-      <rect x="22" y="12" width="78" height="94" rx="24" fill="url(#gNote)"/>
-      <rect x="22" y="12" width="78" height="94" rx="24" fill="url(#gShade)"/>
-      <rect x="22" y="12" width="78" height="94" rx="24" fill="url(#gGloss)"/>
-      <g fill="#EEEBFF" stroke="#7466FF" stroke-width="1.4"><rect x="14" y="26" width="20" height="9" rx="4.5"/><rect x="14" y="48" width="20" height="9" rx="4.5"/><rect x="14" y="70" width="20" height="9" rx="4.5"/></g>
-      <rect x="44" y="70" width="42" height="24" rx="9" fill="#fff" opacity=".95"/>
-      <path d="M52 86l5-9 5 9M54 83.5h7" stroke="#5B4BF0" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-      <path d="M70 79h10M70 85h8" stroke="#A89CFF" stroke-width="2.6" stroke-linecap="round"/>
-      <g><ellipse cx="55" cy="45" rx="7.6" ry="9.6" fill="#fff"/><ellipse cx="79" cy="45" rx="7.6" ry="9.6" fill="#fff"/>
-         <circle cx="57" cy="47" r="4.6" fill="#1E1B3A"/><circle cx="81" cy="47" r="4.6" fill="#1E1B3A"/>
-         <circle cx="58.6" cy="44.6" r="1.6" fill="#fff"/><circle cx="82.6" cy="44.6" r="1.6" fill="#fff"/></g>
-      <path d="M62 60q5 4 10 0" stroke="#1E1B3A" stroke-width="2.2" stroke-linecap="round" fill="none"/>
-    </symbol>
-
-    <!-- 퇴실 퀴즈: 분홍 말풍선 -->
-    <symbol id="m-quiz" viewBox="0 0 120 120">
-      <ellipse cx="60" cy="108" rx="32" ry="6" fill="#C2335F" opacity=".2" filter="url(#fBlur)"/>
-      <path d="M20 40a24 24 0 0 1 24-24h34a24 24 0 0 1 24 24v26a24 24 0 0 1-24 24H58l-22 16 4-17A24 24 0 0 1 20 66z" fill="url(#gQuiz)"/>
-      <path d="M20 40a24 24 0 0 1 24-24h34a24 24 0 0 1 24 24v26a24 24 0 0 1-24 24H58l-22 16 4-17A24 24 0 0 1 20 66z" fill="url(#gShade)"/>
-      <path d="M20 40a24 24 0 0 1 24-24h34a24 24 0 0 1 24 24v26a24 24 0 0 1-24 24H58l-22 16 4-17A24 24 0 0 1 20 66z" fill="url(#gGloss)"/>
-      <g><ellipse cx="51" cy="48" rx="7.4" ry="9.4" fill="#fff"/><ellipse cx="75" cy="48" rx="7.4" ry="9.4" fill="#fff"/>
-         <circle cx="53" cy="50" r="4.5" fill="#1E1B3A"/><circle cx="77" cy="50" r="4.5" fill="#1E1B3A"/>
-         <circle cx="54.5" cy="47.6" r="1.5" fill="#fff"/><circle cx="78.5" cy="47.6" r="1.5" fill="#fff"/></g>
-      <path d="M57 64q6 6 12 0" stroke="#1E1B3A" stroke-width="2.4" stroke-linecap="round" fill="none"/>
-      <circle cx="93" cy="22" r="14" fill="url(#gMint)"/><circle cx="93" cy="22" r="14" fill="url(#gGloss)"/>
-      <path d="M86.5 22.5l5 5 8-9.5" stroke="#fff" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-    </symbol>
-
-    <!-- 반짝이 별 -->
-    <symbol id="m-star" viewBox="0 0 60 60">
-      <path d="M30 4l7 17 17 7-17 7-7 17-7-17-17-7 17-7z" fill="url(#gSun)"/><path d="M30 4l7 17 17 7-17 7-7 17-7-17-17-7 17-7z" fill="url(#gGloss)"/>
-    </symbol>
-  </defs>
-</svg>
-
 <div class="devbar" id="devbar">개발판 — 합친 사이트 확인용입니다. 학생에게는 알려 주지 마세요.</div>
 
 <header class="hub-top" id="h-top" hidden>
-  <a class="hub-brand" href="./" id="h-brand"><svg><use href="#m-note"/></svg>cw-sogolab</a>
+  <a class="hub-brand" href="./" id="h-brand"><img class="lt" src="assets/logo-mark-light.svg" alt=""><img class="dk" src="assets/logo-mark-dark.svg" alt="">cw-sogolab</a>
   <span class="hub-who" id="h-who"></span>
   <nav class="hub-tabs" role="tablist" id="h-tabs" aria-label="메뉴"></nav>
-  <button class="hub-out" id="h-out" type="button">나가기</button>
+  <button class="hub-me" id="h-me" type="button" aria-label="설정" hidden></button>
+  <button class="hub-out" id="h-out" type="button" hidden>나가기</button>
 </header>
 
 <main class="hub-body">
   <section class="hub-login" id="h-login">
-    <div class="hub-hero" aria-hidden="true">
-      <svg class="m m1"><use href="#m-note"/></svg>
-      <svg class="m m2"><use href="#m-quiz"/></svg>
-      <svg class="m m3"><use href="#m-star"/></svg>
-    </div>
+    <div class="hub-hero" aria-hidden="true"><span class="say">반가워요!</span><div class="ped"></div><div class="ch" data-hero="stu"></div></div>
     <div class="hub-card">
       <h1>내 번호로 들어가기</h1>
-      <p>한 번만 입력하면 <b>성적</b>, <b>퇴실 퀴즈</b>, <b>커리큘럼</b>, <b>QnA</b>를 모두 볼 수 있어요.</p>
+      <p>한 번만 입력하면 <b>퇴근 미션</b>, <b>성적노트</b>, <b>수업</b>, <b>질문</b>을 모두 볼 수 있어요.</p>
       <input class="hub-field" id="h-sid" inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="10" placeholder="KM 482919" aria-label="일련번호">
       <label class="hub-rem"><input type="checkbox" id="h-rem"> 이 기기에서 기억하기</label>
       <button class="hub-go" id="h-go" type="button">들어가기</button>
       <div class="hub-err" id="h-err" role="alert"></div>
     </div>
-    <div class="hub-foot"><svg><use href="#m-star"/></svg>made by cw-sogolab</div>
+    <div class="hub-foot">made by cw-sogolab</div>
   </section>
   <section class="hub-login" id="h-gate" hidden>
-    <div class="hub-hero" aria-hidden="true">
-      <svg class="m m1"><use href="#m-pencil"/></svg>
-      <svg class="m m2"><use href="#m-clock"/></svg>
-      <svg class="m m3"><use href="#m-star"/></svg>
-    </div>
+    <div class="hub-hero" aria-hidden="true"><span class="say">선생님 화면</span><div class="ped"></div><div class="ch" data-hero="tch"></div></div>
     <div class="hub-card">
       <h1>선생님 로그인</h1>
-      <p>관리자 비밀번호를 한 번만 입력하면 <b>성적</b>, <b>퀴즈</b>, <b>QnA</b> 관리가 모두 열려요.</p>
+      <p>관리자 비밀번호를 한 번만 입력하면 <b>성적</b>, <b>퇴근 미션</b>, <b>질문</b> 관리가 모두 열려요.</p>
       <input class="hub-field pw" id="h-pw" type="password" autocomplete="current-password" aria-label="관리자 비밀번호" placeholder="비밀번호">
       <button class="hub-go" id="h-pwgo" type="button">들어가기</button>
       <div class="hub-err" id="h-pwerr" role="alert"></div>
     </div>
-    <div class="hub-foot"><svg><use href="#m-star"/></svg>made by cw-sogolab</div>
+    <div class="hub-foot">made by cw-sogolab</div>
   </section>
   <section class="hub-pane" id="p-home" hidden></section>
+  <section class="hub-pane" id="p-closet" hidden></section>
+  <section class="hub-pane" id="p-settings" hidden></section>
   <section class="hub-pane" id="p-a" hidden></section>
   <iframe class="hub-frame" id="f-a" title="" hidden></iframe>
   <section class="hub-pane qz" id="p-b" hidden>
@@ -174,44 +168,67 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
 </main>
 <nav class="hub-bar" role="tablist" id="h-bar" aria-label="메뉴"></nav>
 
+<!-- 옛 마스코트(아직 쓰는 모듈용) · 몽글이 · 허브 아이콘 -->
 <script src="assets/mascots.js"></script>
-<script>HubMascots.mount({ skip: ['m-note', 'm-quiz', 'm-star'] });</script>
+<script>HubMascots.mount();</script>
+<script src="assets/mongle.js?v=20261126c"></script>
+<script src="home/icons.js?v=20261126c"></script>
+<script>
+  HubIcons.mount();
+  if (window.HubMongle) {
+    HubMongle.mount();
+    document.querySelector('[data-hero="stu"]').innerHTML = HubMongle.svg({ body: 'lavender', hat: 'cap', charm: 'star' }, 0, { expr: 'happy', anim: true });
+    document.querySelector('[data-hero="tch"]').innerHTML = HubMongle.svg({ body: 'sky', glasses: 'square' }, 0, { expr: 'base', anim: true });
+  }
+</script>
 <script src="../assets/config.js"></script>
 <script src="assets/core.js"></script>
-<script src="hub-session.js?v=20261124f"></script>
+<script src="hub-session.js?v=20261126c"></script>
 <script>
 (function () {
   var $ = function (s) { return document.querySelector(s); };
-  var V = '20261124f';
+  var V = '20261126c';
   var API = (window.SEISEKI_CONFIG && window.SEISEKI_CONFIG.API_URL && window.SEISEKI_CONFIG.API_URL.dev) || '';
   var ENV = /\/dev\//.test(location.pathname) ? 'dev' : 'prod';
   var KEY = 'hub-dev.sid';
   var teacher = /^#(teacher|admin)$/.test(location.hash);
   var sid = '', myName = '', cur = null, loaded = {};
+  var PANES = ['p-home', 'p-closet', 'p-settings', 'p-a', 'f-a', 'p-b', 'p-c', 'p-d'];
 
-  /* ── 탭 정의: pane = 그려질 칸 id ── */
+  /* ── 탭 정의: pane = 그려질 칸 id, icon = 시안 탭 아이콘. id 는 예전 그대로(주소 #quiz 등) ── */
   var STUDENT = [
-    { id: 'home', label: '홈', icon: 'm-rocket', pane: 'p-home', mount: mountHome },
-    { id: 'grades', label: '성적', icon: 'm-note', pane: 'p-a', mount: mountGrades },
-    { id: 'quiz', label: '퀴즈', icon: 'm-quiz', pane: 'p-b', mount: mountQuiz },
-    { id: 'curriculum', label: '커리큘럼', icon: 'm-book', pane: 'p-c', mount: mountCurriculum },
-    { id: 'qna', label: 'QnA', icon: 'm-pencil', pane: 'p-d', mount: mountQna }
+    { id: 'home', label: '홈', icon: 'home', pane: 'p-home', mount: mountHome },
+    { id: 'quiz', label: '퇴근 미션', icon: 'mission', pane: 'p-b', mount: mountQuiz },
+    { id: 'grades', label: '성적노트', icon: 'note', pane: 'p-a', mount: mountGrades },
+    { id: 'curriculum', label: '수업', icon: 'class', pane: 'p-c', mount: mountCurriculum },
+    { id: 'qna', label: '질문', icon: 'ask', pane: 'p-d', mount: mountQna }
   ];
   var TEACHER = [
-    { id: 'grades', label: '성적', icon: 'm-note', pane: 'p-a', mount: mountGradesAdmin },
-    { id: 'quiz', label: '퀴즈', icon: 'm-quiz', pane: 'p-b', mount: mountQuiz },
-    { id: 'qna', label: 'QnA 관리', icon: 'm-pencil', pane: 'p-d', mount: mountQnaAdmin }
+    { id: 'grades', label: '성적', icon: 'note', pane: 'p-a', mount: mountGradesAdmin },
+    { id: 'quiz', label: '퇴근 미션', icon: 'mission', pane: 'p-b', mount: mountQuiz },
+    { id: 'qna', label: '질문 관리', icon: 'ask', pane: 'p-d', mount: mountQnaAdmin }
   ];
+  /* 홈에서 들어가는 화면(허브 소유) — 탭은 홈에 불이 켜진 채로. 열 때마다 새로 그림 */
+  var SUB = {
+    closet: { pane: 'p-closet', parent: 'home', label: '꾸미기', mount: function (el) { return loadOnce('closet/closet.js?v=' + V).then(function () { HubCloset.mount(el, { session: HubSession, back: function () { show('home'); } }); }); } },
+    settings: { pane: 'p-settings', parent: 'home', label: '설정', mount: function (el) { return loadOnce('settings/settings.js?v=' + V).then(function () { HubSettings.mount(el, { session: HubSession, theme: window.HubTheme, back: function () { show('home'); }, open: openSub, leave: leave }); }); } }
+  };
   var TABS = teacher ? TEACHER : STUDENT;
+  if (!teacher) document.body.classList.add('hub-stu');
 
   function store(k, v) { try { if (v === undefined) return localStorage.getItem(k); if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) { return null; } }
   // 안쪽 화면이 지난 사람의 번호를 기억하고 있으면 새 번호가 안 먹으니 먼저 지움
   function wipeInner() { var k = ENV === 'dev' ? ['seiseki-dev.code', 'seiseki-dev.view', 'kitaku-dev.me'] : ['seiseki.code', 'seiseki.view', 'kitaku.me']; k.forEach(function (x) { store(x, null); }); }
   function loadScript(src) { return new Promise(function (res, rej) { var e = document.createElement('script'); e.src = src; e.onload = res; e.onerror = rej; document.head.appendChild(e); }); }
-  function soon(el, what) { el.innerHTML = '<div class="hub-soon">' + HubMascots.svg('m-sleep', 96, 'hm-float') + '<b>' + what + ' 준비 중이에요</b><span>곧 열려요. 조금만 기다려 주세요.</span></div>'; }
+  var once = {};
+  function loadOnce(src) { return once[src] || (once[src] = loadScript(src).catch(function (e) { delete once[src]; throw e; })); }
+  function soon(el, what) {
+    var m = window.HubMongle ? HubMongle.svg(null, 96, { expr: 'base' }) : '';
+    el.innerHTML = '<div class="hub-soon">' + m + '<b>' + what + ' 준비 중이에요</b><span>곧 열려요. 조금만 기다려 주세요.</span></div>';
+  }
 
   /* ── 탭별 화면 붙이기 (처음 열 때 한 번) ── */
-  function mountHome(el) { return loadScript('home/home.js?v=' + V).then(function () { HubHome.mount(el, { session: HubSession, name: myName, go: show }); }); }
+  function mountHome(el) { return loadOnce('home/home.js?v=' + V).then(function () { HubHome.mount(el, { session: HubSession, name: myName, go: show, open: openSub }); }); }
   function mountGrades(el) { return loadScript('grades-native/gr.js?v=' + V).then(function () { HubGrades.mount(el, { code: sid, name: myName, apiUrl: API, env: ENV, onAuthError: function () { leave(); } }); }); }
   function mountQuiz() {
     window.HUB = 1; window.HUB_ENV = ENV;
@@ -219,9 +236,9 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
     return loadScript('https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js').catch(function () {})
       .then(function () { return loadScript('qz/data.js?v=' + V); }).then(function () { return loadScript('qz/quiz.js?v=' + V); });
   }
-  function mountCurriculum(el) { return loadScript('curriculum/cur.js?v=' + V).then(function () { HubCurriculum.mount(el, { session: HubSession }); }, function () { soon(el, '커리큘럼'); }); }
-  function mountQna(el) { return loadScript('qna/qna.js?v=' + V).then(function () { HubQna.mount(el, { session: HubSession }); }, function () { soon(el, 'QnA'); }); }
-  function relogin() { HubSession.clear(); $('#h-top').hidden = true; ['p-home', 'p-a', 'f-a', 'p-b', 'p-c', 'p-d'].forEach(function (p) { $('#' + p).hidden = true; }); loaded = {}; $('#h-gate').hidden = false; $('#h-pwerr').textContent = '로그인이 풀렸어요. 다시 입력해 주세요.'; $('#h-pw').value = ''; $('#h-pw').focus(); }
+  function mountCurriculum(el) { return loadScript('curriculum/cur.js?v=' + V).then(function () { HubCurriculum.mount(el, { session: HubSession }); }, function () { soon(el, '수업'); }); }
+  function mountQna(el) { return loadScript('qna/qna.js?v=' + V).then(function () { HubQna.mount(el, { session: HubSession }); }, function () { soon(el, '질문'); }); }
+  function relogin() { HubSession.clear(); $('#h-top').hidden = true; PANES.forEach(function (p) { $('#' + p).hidden = true; }); loaded = {}; $('#h-gate').hidden = false; $('#h-pwerr').textContent = '로그인이 풀렸어요. 다시 입력해 주세요.'; $('#h-pw').value = ''; $('#h-pw').focus(); }
   function mountGradesAdmin(el) {
     return loadScript('grades-admin/ga.js?v=' + V).then(function () {
       HubGradesAdmin.mount(el, { session: HubSession, apiUrl: API, env: ENV, onAuthError: relogin });
@@ -230,7 +247,7 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
     });
   }
   function mountQnaAdmin(el) {
-    return loadScript('qna/qna.js?v=' + V).then(function () { HubQnaAdmin.mount(el, { session: HubSession, onPending: function (n) { badge('qna', n); }, onAuthError: relogin }); }, function () { soon(el, 'QnA 관리'); });
+    return loadScript('qna/qna.js?v=' + V).then(function () { HubQnaAdmin.mount(el, { session: HubSession, onPending: function (n) { badge('qna', n); }, onAuthError: relogin }); }, function () { soon(el, '질문 관리'); });
   }
   function badge(id, n) { document.querySelectorAll('.hub-tab[data-id="' + id + '"] .bd').forEach(function (b) { b.remove(); }); if (n > 0) document.querySelectorAll('.hub-tab[data-id="' + id + '"]').forEach(function (t) { var b = document.createElement('span'); b.className = 'bd'; b.textContent = n > 99 ? '99+' : n; t.appendChild(b); }); }
 
@@ -238,24 +255,58 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
     ['h-tabs', 'h-bar'].forEach(function (nid) {
       var t = $('#' + nid); t.innerHTML = '';
       TABS.forEach(function (x) {
-        var b = document.createElement('button'); b.className = 'hub-tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = x.id;
-        b.innerHTML = '<svg><use href="#' + x.icon + '"/></svg>' + x.label; b.onclick = function () { show(x.id); }; t.appendChild(b);
+        var b = document.createElement('button'); b.className = 'hub-tab'; b.type = 'button'; b.setAttribute('role', 'tab'); b.dataset.id = x.id; b.dataset.icon = x.icon; b.setAttribute('aria-selected', 'false');
+        b.innerHTML = HubIcons.tab(x.icon, false) + '<span>' + x.label + '</span>'; b.onclick = function () { show(x.id); }; t.appendChild(b);
       });
     });
   }
-  function show(id) {
-    var tab = TABS.filter(function (x) { return x.id === id; })[0] || TABS[0]; id = tab.id; cur = id;
-    TABS.forEach(function (x) { document.querySelectorAll('.hub-tab[data-id="' + x.id + '"]').forEach(function (b) { b.setAttribute('aria-selected', x.id === id); }); });
-    ['p-home', 'p-a', 'f-a', 'p-b', 'p-c', 'p-d'].forEach(function (p) { $('#' + p).hidden = p !== tab.pane; });
-    if (!loaded[id]) { loaded[id] = 1; Promise.resolve(tab.mount($('#' + tab.pane))).catch(function () { soon($('#' + tab.pane), tab.label); }); }
-    else if (id === 'grades' && window.HubGrades && !teacher) { /* 이미 열려 있음 */ }
-    try { history.replaceState(null, '', location.pathname + location.search + (teacher ? '#teacher' : (id === 'home' ? '' : '#' + id))); } catch (e) {}
+  function markTabs(id) {
+    document.querySelectorAll('.hub-tab[data-id]').forEach(function (b) {
+      var on = b.dataset.id === id, was = b.getAttribute('aria-selected') === 'true';
+      b.setAttribute('aria-selected', String(on)); if (on) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+      if (on !== was) { var s = b.querySelector('svg'); if (s) s.outerHTML = HubIcons.tab(b.dataset.icon, on); }
+    });
   }
+  function show(id) {
+    var sub = !teacher && SUB[id], tab = sub ? null : (TABS.filter(function (x) { return x.id === id; })[0] || TABS[0]);
+    var pane = sub ? sub.pane : tab.pane; id = sub ? id : tab.id; cur = id;
+    markTabs(sub ? sub.parent : id);
+    PANES.forEach(function (p) { $('#' + p).hidden = p !== pane; });
+    if (sub) { Promise.resolve().then(function () { return sub.mount($('#' + pane)); }).catch(function () { soon($('#' + pane), sub.label); }); }
+    else if (!loaded[id]) { loaded[id] = Promise.resolve().then(function () { return tab.mount($('#' + tab.pane)); }).catch(function () { soon($('#' + tab.pane), tab.label); }); }
+    else if (id === 'home' && window.HubHome && HubHome.refresh) HubHome.refresh();
+    try { history.replaceState(null, '', location.pathname + location.search + (teacher ? '#teacher' : (id === 'home' ? '' : '#' + id))); } catch (e) {}
+    return loaded[id] || Promise.resolve();
+  }
+  /** 홈에서 들어가는 화면: closet · settings · rank(퇴근 미션 탭의 랭킹) */
+  function openSub(what) {
+    if (what === 'rank') {
+      return show('quiz').then(function () {
+        try {
+          if (window.HubQuiz && typeof HubQuiz.openRank === 'function') HubQuiz.openRank('cls');
+          else if (typeof window.openRank === 'function') window.openRank('cls');   // 퀴즈(qz/quiz.js)의 랭킹 화면 — 「돌아가기」는 퀴즈 첫 화면
+        } catch (e) {}
+      });
+    }
+    if (SUB[what]) show(what);
+  }
+  function initialOf(nm) { return window.HubHome && HubHome._initial ? HubHome._initial(nm) : String(nm || '?').charAt(0); }
+  function meBtn() {
+    var b = $('#h-me'); if (teacher || !sid) return;
+    HubSession.char().then(function (r) {
+      var c = r.data || {};
+      b.innerHTML = window.HubMongle ? HubMongle.avatar(c.state, 34, { show: c.show !== false, initial: initialOf(myName) }) : '';
+    });
+  }
+  window.addEventListener('hub:char', meBtn);
   function enter(s, nm) {
     sid = s; myName = nm || ''; loaded = {};
     HubSession.init({ code: s, name: nm, env: ENV, apiUrl: API });
     $('#h-login').hidden = true; $('#h-top').hidden = false; $('#h-who').textContent = nm ? nm + ' 학생' : '';
-    tabsHtml(); var h = (location.hash || '').slice(1); show(STUDENT.some(function (x) { return x.id === h; }) ? h : 'home');
+    $('#h-me').hidden = false; $('#h-me').onclick = function () { show('settings'); };
+    tabsHtml(); var h = (location.hash || '').slice(1);
+    show(STUDENT.some(function (x) { return x.id === h; }) || SUB[h] ? h : 'home');
+    loadOnce('home/home.js?v=' + V).then(meBtn, meBtn);
   }
   function leave() {
     store(KEY, null); wipeInner(); HubSession.clear(); sid = ''; loaded = {};
@@ -285,7 +336,10 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
   $('#h-out').onclick = leave;
   $('#h-brand').onclick = function (e) { e.preventDefault(); if (!$('#h-top').hidden) show(TABS[0].id); };
 
-  // 시작: 강사(#teacher)는 로그인 없이 강사 탭 / 학생은 #sid= 로 넘어왔거나 기억한 번호가 있으면 바로
+  // 같은 페이지에서 주소만 #teacher ↔ 학생으로 바뀌면(주소창에 직접 입력) 새로 불러옴 — 퀴즈가 #teacher 를 받아 학생 화면 안에 PIN 화면을 띄우지 않게
+  window.addEventListener('hashchange', function () { if (/^#(teacher|admin)$/.test(location.hash) !== teacher || /[#&]sid=/.test(location.hash)) location.reload(); });
+
+  // 시작: 강사(#teacher)는 비밀번호 화면 → 강사 탭 / 학생은 #sid= 로 넘어왔거나 기억한 번호가 있으면 바로
   if (teacher) {
     HubSession.init({ code: '', name: '', env: ENV, apiUrl: API });
     $('#h-login').hidden = true; $('#h-gate').hidden = false; $('#h-who').textContent = '선생님';
@@ -294,8 +348,8 @@ body.hub{margin:0;display:flex;flex-direction:column;height:100dvh;background:va
       HubSession.adminLogin(pw).then(function (r) {
         $('#h-pwgo').disabled = false;
         if (!r.ok) { $('#h-pwerr').textContent = r.error || '로그인하지 못했어요.'; return; }
-        $('#h-pw').value = ''; $('#h-gate').hidden = true; $('#h-top').hidden = false; $('#h-who').textContent = '선생님'; loaded = {};
-        tabsHtml(); var h = (location.hash || '').slice(1); show('grades');
+        $('#h-pw').value = ''; $('#h-gate').hidden = true; $('#h-top').hidden = false; $('#h-who').textContent = '선생님'; $('#h-out').hidden = false; loaded = {};
+        tabsHtml(); show('grades');
       });
     };
     $('#h-pwgo').onclick = gate; $('#h-pw').addEventListener('keydown', function (e) { if (e.key === 'Enter') gate(); });

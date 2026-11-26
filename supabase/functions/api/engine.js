@@ -311,10 +311,18 @@ var Logic = (function () {
     '계획서머리': ['월', '반종류', '과목', '반', '부제', '강의명', '강의목표', '담당강사', '연락처', '강의기간', '강의시간', '강의실', '교재', '질문시간', '질문방법', '평가방법'],
     // 질문: 학생 QnA (2026-11-24). 공개 = Y/N (학생이 질문마다 고름), 상태 = 대기/답변, 사진·답변사진 = 파일ID 를 쉼표로 이은 문자열.
     //   시험 ID 처럼 「질문ID」 로 찾음. 서버 마이그레이션은 supabase/migrations/002_qna.sql (001 과 따로)
-    '질문': ['질문ID', '번호', '과목', '제목', '내용', '공개', '작성일', '상태', '답변', '답변일', '사진', '답변사진']
+    '질문': ['질문ID', '번호', '과목', '제목', '내용', '공개', '작성일', '상태', '답변', '답변일', '사진', '답변사진'],
+    // 캐릭터: 몽글이 꾸미기 (2026-11-26). 학생마다 한 줄. 몸·모자·안경·키링 = 아이템 id(CHAR_ITEMS), 표시 = Y/N(N 이면 랭킹 등에서 이름 첫 글자 동그라미).
+    //   얻은 아이템은 저장하지 않고 쌓인 기록(출석·숙제·퇴근 미션·질문·시험)으로 그때그때 계산. 서버 마이그레이션은 supabase/migrations/003_char.sql
+    '캐릭터': ['번호', '몸', '모자', '안경', '키링', '표시', '수정일']
+  };
+  /** 규칙이 읽기만 하는 표 (Logic.TABLES 밖 — 시트 초기 설정·스키마 생성에 안 들어감, 쓰면 오류).
+   *  퀴즈기록: 퇴근 미션 결과(quiz.js log 가 씀). 서버 pgstore 는 「시각」을 한국 시각 'YYYY-MM-DD HH:MM' 글자로 바꿔 읽음. Apps Script 에는 없음(읽으면 빈 목록) */
+  var READONLY = {
+    '퀴즈기록': ['시각', '번호', '이름', '반', '범위', '첫시도정답', '시도횟수']
   };
   /** 서버·화면 코드 버전 — tools/sync-gas.sh 가 core.js·logic.js·Code.gs 내용으로 자동으로 바꿈. 화면이 서버 응답의 ver 와 비교해 다르면 경고 */
-  var VERSION = '0080aa0973';
+  var VERSION = '80359dbffe';
   /** 숫자로 바뀌면 안 되는 열(앞자리 0, 긴 숫자열) — Code.gs 가 텍스트 서식으로 고정 */
   var TEXT_COLS = ['시험지ID', '일련번호', '번호', '정답', '답안', '오답답안', '틀린번호', '반코드', '시험ID', '숙제ID', '파일ID', '월', '시험일', '개강', '종강', '휴강', '마감', '질문ID', '작성일', '답변일', '사진', '답변사진'];
   var STU_TTL = 6 * 3600;            // 학생 로그인 열쇠 유효 시간
@@ -1472,8 +1480,142 @@ var Logic = (function () {
     return qnaReadImage(env, id);
   }
 
+  /* ---------- 몽글이 꾸미기 (2026-11-26, docs/dev/DESIGN.md 2·3번) ----------
+   * 아이템 목록은 DESIGN.md 표와 id·kind·grade 가 같아야 함 (3D 렌더 파일 이름). id 는 종류(kind) 안에서만 하나 — 「none」「star」는 여러 종류에 있음.
+   * 얻는 조건은 쌓인 기록으로 계산(따로 저장 안 함): basic = 처음부터, hip = 성실(출석·숙제·퇴근 미션·질문), rare = 성적(소테스트·월말테스트).
+   *   출석한 날 = 접속기록(로그인·자동 로그인) 날짜 ∪ 퇴근 미션(수업, 연습 제외) 기록 날짜. 연속 = 지금까지 가장 길게 이어진 날 수.
+   *   퇴근 미션 = 퀴즈기록 중 번호가 내 번호인 줄(원외생 제외). 「연습」(반 「연습」 또는 범위 「연습 · …」)은 참가·통과에 안 넣고 연습 문제 수에만.
+   *   첫 도전 통과 = 첫시도정답이 n/n. 숙제 기한 내 = 학생이 직접 낸(대리입력 아님) 숙제 중 처음 낸 시각 ≤ 마감(마감을 모르면 기한 내로 셈).
+   *   소테스트·월말테스트 = 시험 「종류」 그대로. 학생이 직접 입력하는 「EJU 기출」과 문항 수보다 큰 점수(입력 오타)는 뺌. 월말 점수는 100점 만점 환산(맞은 수/문항 수×100), 한 달에 여러 개면 그 달 평균.
+   *   「지난달보다 +10점」 = 월말을 본 달끼리 바로 앞 달과 비교해 가장 많이 오른 점수.
+   * 별(★) = 얻은 아이템 수(기본 제외) × 10 + 퇴근 미션 첫 도전 통과 수 × 2 (확정 아님 — 선생님 확인 전).
+   * 서버 설정 CHAR_UNLOCK_ALL=Y 면 모든 아이템 owned (시험용) — cond·progress·별은 그대로 규칙대로. */
+  var CHAR_KINDS = ['body', 'hat', 'glasses', 'charm'];
+  var CHAR_COL = { body: '몸', hat: '모자', glasses: '안경', charm: '키링' };
+  var CHAR_DEFAULT = { body: 'lavender', hat: 'none', glasses: 'none', charm: 'none' };
+  // [kind, id, 이름, 등급, 조건 문구, 계산값(charStats 의 키), 목표]
+  var CHAR_ITEMS = [
+    ['body', 'lavender', '라벤더', 'basic'], ['body', 'peach', '피치', 'basic'],
+    ['body', 'mint', '민트', 'hip', '3일 연속 출석', 'streak', 3],
+    ['body', 'sky', '스카이', 'hip', '7일 연속 출석', 'streak', 7],
+    ['body', 'butter', '버터', 'rare', '소테스트 만점', 'smallFull', 1],
+    ['hat', 'none', '없음', 'basic'], ['hat', 'cap', '캡', 'basic'],
+    ['hat', 'beanie', '비니', 'hip', '퇴근 미션 10회 참가', 'quizN', 10],
+    ['hat', 'headphone', '헤드폰', 'hip', '퇴근 미션 30회 참가', 'quizN', 30],
+    ['hat', 'hood', '후드', 'hip', '숙제 기한 내 10번', 'hwOnTime', 10],
+    ['hat', 'bucket', '버킷햇', 'hip', '숙제 기한 내 30번', 'hwOnTime', 30],
+    ['hat', 'crown', '왕관', 'rare', '월말테스트 95% 이상', 'monthBest', 95],
+    ['glasses', 'none', '없음', 'basic'], ['glasses', 'round', '동글 안경', 'basic'],
+    ['glasses', 'sun', '선글라스', 'hip', '퇴근 미션 첫 도전 통과 5번', 'passN', 5],
+    ['glasses', 'square', '네모 안경', 'hip', '퇴근 미션 첫 도전 통과 20번', 'passN', 20],
+    ['glasses', 'star', '별 안경', 'rare', '월말테스트 80% 이상', 'monthBest', 80],
+    ['charm', 'none', '없음', 'basic'], ['charm', 'star', '별 키링', 'basic'],
+    ['charm', 'heart', '하트', 'hip', 'QnA 첫 질문', 'qna', 1],
+    ['charm', 'bolt', '번개', 'hip', '퇴근 미션 연습 100문제', 'pracQ', 100],
+    ['charm', 'chain', '체인', 'hip', '출석 30일', 'days', 30],
+    ['charm', 'fuji', '후지산', 'rare', '지난달보다 월말 +10점', 'monthUp', 10],
+    ['charm', 'sakura', '벚꽃', 'rare', '소테스트 만점 5번', 'smallFull', 5]
+  ].map(function (a) { return { kind: a[0], id: a[1], name: a[2], grade: a[3], cond: a[4] || '처음부터', stat: a[5] || '', goal: a[6] || 0 }; });
+  var CHAR_RATE = 30, CHAR_RATE_SEC = 60;   // 꾸미기 저장은 1분에 30번까지
+  function charItem(kind, id) { return CHAR_ITEMS.filter(function (x) { return x.kind === kind && x.id === id; })[0] || null; }
+  function quizRows(env) {
+    var rows; try { rows = env.store.all('퀴즈기록'); } catch (e) { return []; }   // Apps Script 등 표가 없으면 빈 목록
+    return rows || [];
+  }
+  function dayNum(d) { return Date.UTC(+d.slice(0, 4), +d.slice(5, 7) - 1, +d.slice(8, 10)) / 86400000; }
+  /** 한 학생의 꾸미기 조건 계산값 */
+  function charStats(env, stu) {
+    var code = stu.code, days = {}, o = { streak: 0, days: 0, quizN: 0, passN: 0, pracQ: 0, hwOnTime: 0, qna: 0, smallFull: 0, monthBest: 0, monthUp: 0 };
+    quizRows(env).forEach(function (r) {
+      if (C.normCode(r['번호']) !== code) return;
+      var cls = S(r['반']).trim(); if (cls === '원외생') return;
+      var m = /(\d+)\s*\/\s*(\d+)/.exec(S(r['첫시도정답'])); if (!m || !+m[2]) return;
+      if (cls === '연습' || /^연습 · /.test(S(r['범위']))) { o.pracQ += +m[2]; return; }
+      o.quizN++; if (+m[1] === +m[2]) o.passN++;
+      var d = normDate(r['시각']); if (d) days[d] = 1;
+    });
+    var log = [];
+    try { log = env.readLog ? env.readLog(code) || [] : []; } catch (e) { log = []; }
+    log.forEach(function (r) { if (C.normCode(r['번호']) === code) { var d = normDate(r['시각']); if (d) days[d] = 1; } });
+    var ds = Object.keys(days).sort(), run = 0, prev = null;
+    ds.forEach(function (d) { var n = dayNum(d); run = prev !== null && n - prev === 1 ? run + 1 : 1; prev = n; if (run > o.streak) o.streak = run; });
+    o.days = ds.length;
+    var hwById = {}; homework(env).forEach(function (h) { hwById[h.id] = h; });
+    hwSubs(env).forEach(function (s) {
+      var h = hwById[s.hw];
+      if (s.code === code && h && !s.proxy && s.first && !isLate(h, s)) o.hwOnTime++;
+    });
+    o.qna = qnaRows(env).filter(function (r) { return S(r['번호']) === code; }).length;
+    var exById = {}, perMonth = {};
+    exams(env).forEach(function (e) { exById[e.id] = e; });
+    results(env).forEach(function (r) {
+      var e = exById[r.exam];
+      if (r.code !== code || !e || !e.total || r.score > e.total || /EJU 기출/.test(e.label)) return;
+      if (e.kind === '소테스트' && r.score === e.total) o.smallFull++;
+      if (e.kind === '월말테스트') {
+        var pct = r.score / e.total * 100;
+        if (pct > o.monthBest) o.monthBest = pct;
+        (perMonth[e.month] || (perMonth[e.month] = [])).push(pct);
+      }
+    });
+    var ms = Object.keys(perMonth).filter(Boolean).sort();
+    for (var i = 1; i < ms.length; i++) { var up = C.mean(perMonth[ms[i]]) - C.mean(perMonth[ms[i - 1]]); if (up > o.monthUp) o.monthUp = up; }
+    o.monthBest = Math.round(o.monthBest * 10) / 10; o.monthUp = Math.round(o.monthUp * 10) / 10;
+    return o;
+  }
+  function charUnlockAll(env) { return S(env.props.get('CHAR_UNLOCK_ALL')).trim().toUpperCase() === 'Y'; }
+  /** [{id,kind,grade,name,owned,cond,progress}] + 규칙으로 얻은 개수(기본 제외) */
+  function charItemsFor(env, stu, st) {
+    var all = charUnlockAll(env), earned = 0;
+    var items = CHAR_ITEMS.map(function (x) {
+      var got = x.grade === 'basic' || st[x.stat] >= x.goal;
+      if (got && x.grade !== 'basic') earned++;
+      return { id: x.id, kind: x.kind, grade: x.grade, name: x.name, owned: all || got, cond: x.cond,
+        progress: x.grade === 'basic' ? null : { now: Math.min(x.goal, st[x.stat]), goal: x.goal } };
+    });
+    return { items: items, earned: earned };
+  }
+  function charRow(env, code) {
+    var rows; try { rows = env.store.all('캐릭터'); } catch (e) { return null; }
+    return rows.filter(function (r) { return C.normCode(r['번호']) === code; })[0] || null;
+  }
+  function charStateOf(r) {
+    var st = {};
+    CHAR_KINDS.forEach(function (k) { var v = r ? S(r[CHAR_COL[k]]).trim() : ''; st[k] = charItem(k, v) ? v : CHAR_DEFAULT[k]; });
+    return st;
+  }
+  /** 학생: 내 캐릭터 · 표시 여부 · 별 · 아이템 목록(얻었는지·조건·진행) */
+  function charGet(env, p) {
+    var stu = studentFor(env, p), row = charRow(env, stu.code), st = charStats(env, stu), it = charItemsFor(env, stu, st);
+    return ok({ state: charStateOf(row), show: !row || S(row['표시']).trim() !== 'N', star: it.earned * 10 + st.passN * 2, items: it.items });
+  }
+  /** 학생: 입기·끄기 저장. 빠진 칸은 지금 것 그대로. 새로 입는 아이템은 얻은 것만(지금 입고 있는 것은 그대로 둘 수 있음) */
+  function charSet(env, p) {
+    var stu = studentFor(env, p), row = charRow(env, stu.code), cur = charStateOf(row), next = {}, list = null, i;
+    for (i = 0; i < CHAR_KINDS.length; i++) {
+      var k = CHAR_KINDS[i], v = p[k] === undefined || p[k] === null || S(p[k]).trim() === '' ? cur[k] : S(p[k]).trim();
+      if (!charItem(k, v)) return fail('없는 아이템이에요.');
+      if (v !== cur[k]) {
+        list = list || charItemsFor(env, stu, charStats(env, stu)).items;
+        if (!list.some(function (x) { return x.kind === k && x.id === v && x.owned; })) return fail('아직 얻지 못한 아이템이에요');
+      }
+      next[k] = v;
+    }
+    var curShow = !row || S(row['표시']).trim() !== 'N', show = p.show === undefined || p.show === null || p.show === '' ? curShow : qBool(p.show);
+    var same = row && show === curShow && CHAR_KINDS.every(function (k) { return next[k] === cur[k] && S(row[CHAR_COL[k]]).trim() === cur[k]; });
+    if (!same) {
+      var rk = 'char:rate:' + stu.code, n = num(env.cache.get(rk));
+      if (n >= CHAR_RATE) return fail('너무 자주 바꾸고 있어요. 1분 뒤에 다시 해 주세요.');
+      env.cache.put(rk, String(n + 1), CHAR_RATE_SEC);
+      var o = { '번호': stu.code, '표시': show ? 'Y' : 'N', '수정일': stamp(env) };
+      CHAR_KINDS.forEach(function (k) { o[CHAR_COL[k]] = next[k]; });
+      upsert(env, '캐릭터', function (r) { return C.normCode(r['번호']) === stu.code; }, o);
+    }
+    return ok({ state: next, show: show });
+  }
+
   var STUDENT = { login: login, hwPhoto: hwPhoto, hwFinish: hwFinish, practiceList: practiceList, practiceSubmit: practiceSubmit,
-    curriculum: curriculum, qnaList: qnaList, qnaAsk: qnaAsk, qnaPhoto: qnaPhoto, qnaDelete: qnaDelete };
+    curriculum: curriculum, qnaList: qnaList, qnaAsk: qnaAsk, qnaPhoto: qnaPhoto, qnaDelete: qnaDelete, charGet: charGet, charSet: charSet };
   var ADMIN = { bootstrap: bootstrap, saveResult: saveResult, saveRetry: saveRetry, deleteResult: deleteResult, addExam: addExam, updateExamKey: updateExamKey, setExamSubjs: setExamSubjs,
     deleteExam: deleteExam, addHomework: addHomework, deleteHomework: deleteHomework, setChecked: setChecked, proxyHw: proxyHw,
     hwPhotos: hwPhotos, ocrRoster: ocrRoster, importRoster: importRoster, setClasses: setClasses, saveEval: saveEval, setHwDue: setHwDue, studentAs: studentAs, accessLog: accessLog, photo: photo,
@@ -1507,9 +1649,9 @@ var Logic = (function () {
 
   /** 쓰기 요청인지 (서버에서 잠금 걸 때 사용) */
   var WRITES = ['hwPhoto', 'hwFinish', 'practiceSubmit', 'saveResult', 'saveRetry', 'deleteResult', 'addExam', 'updateExamKey', 'setExamSubjs', 'deleteExam', 'addHomework',
-    'deleteHomework', 'setChecked', 'proxyHw', 'importRoster', 'setClasses', 'saveEval', 'setHwDue', 'qnaAsk', 'qnaDelete', 'qnaAnswer', 'qnaAdminDelete'];
+    'deleteHomework', 'setChecked', 'proxyHw', 'importRoster', 'setClasses', 'saveEval', 'setHwDue', 'qnaAsk', 'qnaDelete', 'qnaAnswer', 'qnaAdminDelete', 'charSet'];
 
-  return { TABLES: TABLES, ACCESS_HEAD: ACCESS_HEAD, TEXT_COLS: TEXT_COLS, WRITES: WRITES, VERSION: VERSION, handle: handle, cleanupPhotos: cleanupPhotos, itemStats: itemStats };
+  return { TABLES: TABLES, READONLY: READONLY, CHAR_ITEMS: CHAR_ITEMS, CHAR_DEFAULT: CHAR_DEFAULT, ACCESS_HEAD: ACCESS_HEAD, TEXT_COLS: TEXT_COLS, WRITES: WRITES, VERSION: VERSION, handle: handle, cleanupPhotos: cleanupPhotos, itemStats: itemStats };
 })();
 if (typeof module !== 'undefined' && module.exports) module.exports = Logic;
 

@@ -1,11 +1,12 @@
-/* 허브 안 「커리큘럼」 탭 (HubCurriculum) — 2026-11-24.
+/* 허브 안 「수업」 탭 (HubCurriculum) — 2026-11-24, 새 디자인(sian-final ⑦ 수업 맵) 2026-11-26.
  *   HubCurriculum.mount(rootEl, { session, today?, onAuthError? }) / HubCurriculum.unmount()
  *   session  hub-session.js 의 HubSession (또는 같은 모양: call(action, payload) → Promise<{ok,data,error,needLogin}>)
  *   today    'YYYY-MM-DD' — 「오늘」을 바꿔 보고 싶을 때만 (시험·시연용)
  *   onAuthError(msg)  서버가 다시 로그인하라고 할 때 허브가 로그인 화면으로 돌리게 부름 (선택)
  *   HubCurriculum.refresh()  서버에서 다시 불러오기 (허브가 탭을 다시 열 때)
  *
- * 위쪽 「전체 과정」은 이 파일 안의 고정 내용(ROAD), 아래쪽 「내 수업계획서」는 서버 curriculum 응답.
+ * 맨 위 「수업 맵」(고른 반의 이번 달 회차 — 계산은 mapModel 주석), 그 아래 「내 수업계획서」(서버 curriculum 응답), 맨 아래 「전체 과정」(이 파일 안의 고정 내용 ROAD).
+ * 색·글꼴은 docs/dev/assets/ds.css 변수만(다크 = <html data-theme="dark">). 캐릭터는 HubMongle(+HubSession.char) → 없으면 HubMascots.
  * 서버 계약: data.classes[{code,name,kind('개념'|'단풀'|'실전'),time,months:[{month:'2026-11',head,rows:[{round,date,content,range,homework}],cal:{start,end,off}}]}]  (최근 달이 먼저)
  * 규칙·계산은 서버 몫, 이 파일은 그리기만 한다. CSS 는 cur.css (전부 .cur 아래). 전역에는 window.HubCurriculum 하나만 둔다.
  *
@@ -118,15 +119,59 @@
     return t;
   }
 
+  /* ---------- 캐릭터 (몽글이) — 빈 화면·오류·완강 자리와 수업 맵에만 ----------
+   * window.HubMongle(assets/mongle.js) + HubSession.char() 가 있으면 내 몽글이, 없으면 HubMascots 대체 그림, 그것도 없으면 빈 자리.
+   * 자리는 <span class="cur-ch" data-chs data-che data-chf> 로 그려 두고, hub:char 이벤트가 오면 다시 채움. */
+  var charSt = null;
+  function charInner(size, expr, fb) {
+    var M = window.HubMongle;
+    if (M && (M.avatar || M.svg)) {
+      try {
+        var st = charSt ? charSt.state : null, show = !charSt || charSt.show !== false;
+        var nm = session && session.name ? String(session.name) : '';
+        if (!show && M.avatar) return M.avatar(st, size, { show: false, initial: nm.charAt(0) || '나', expr: expr || 'base' });
+        return M.svg(st, size, { expr: expr || 'base', anim: true, shadow: true });
+      } catch (e) { /* 대체 그림으로 */ }
+    }
+    return fb ? mas(fb, size, 'hm-float') : '';
+  }
+  function charSlot(size, expr, fb, cls) {
+    return '<span class="cur-ch' + (cls ? ' ' + cls : '') + '" aria-hidden="true" data-chs="' + size + '" data-che="' + esc(expr || 'base') + '" data-chf="' + esc(fb || '') + '">' + charInner(size, expr, fb) + '</span>';
+  }
+  function refreshChars() {
+    if (!root) return;
+    all('.cur-ch').forEach(function (el) { el.innerHTML = charInner(+el.getAttribute('data-chs'), el.getAttribute('data-che'), el.getAttribute('data-chf')); });
+  }
+  function loadChar() {
+    if (!session || typeof session.char !== 'function') return;
+    var s0 = session;
+    try {
+      Promise.resolve(session.char()).then(function (r) {
+        if (!root || session !== s0) return;
+        var d = r && r.data ? r.data : r;
+        if (d && (d.state || d.show !== undefined)) { charSt = { state: d.state || null, show: d.show }; refreshChars(); }
+      }, function () { /* 기본 몽글이 그대로 */ });
+    } catch (e) { /* */ }
+  }
+
+  /* ---------- 작은 아이콘 (수업 맵) ---------- */
+  var IC = {
+    check: '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="13" r="10" fill="#17966A"/><circle cx="12" cy="11.6" r="10" fill="#3CC995"/><path d="M7.4 11.8l3.2 3.2 6-6.4" stroke="#fff" stroke-width="2.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 11V8.6a4 4 0 0 1 8 0V11" fill="none" stroke="#8C86AB" stroke-width="2.6" stroke-linecap="round"/><rect x="5" y="11" width="14" height="10.2" rx="3.6" fill="#77719A"/><rect x="5" y="10.2" width="14" height="10" rx="3.6" fill="#A9A4C8"/><circle cx="12" cy="14.6" r="1.7" fill="#4E4870"/><rect x="11.2" y="15" width="1.6" height="3" rx=".8" fill="#4E4870"/></svg>',
+    gift: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4.6" y="11" width="14.8" height="10.2" rx="3" fill="#D63F78"/><rect x="4.6" y="10.4" width="14.8" height="10" rx="3" fill="#FF6E9F"/><rect x="3.4" y="7.4" width="17.2" height="5.4" rx="2.6" fill="#FF86B0"/><rect x="10.6" y="7.4" width="2.8" height="13.2" fill="#FFC93D"/><ellipse cx="9.1" cy="5.7" rx="3.2" ry="2" fill="#FFC93D" transform="rotate(24 9.1 5.7)"/><ellipse cx="14.9" cy="5.7" rx="3.2" ry="2" fill="#FFC93D" transform="rotate(-24 14.9 5.7)"/><circle cx="12" cy="7" r="1.7" fill="#E5A400"/></svg>'
+  };
+
   /* ---------- 틀 ---------- */
-  function heroHtml() {
-    return '<header class="cur-hero"><div class="cur-hero-t"><p class="cur-hi" id="cur-hi">안녕하세요</p><h1 class="cur-title">커리큘럼</h1><p class="cur-sum" id="cur-sum">' + esc(ROAD.intro) + '</p></div>' +
-      '<div class="cur-hero-m" aria-hidden="true">' + mas('m-book-happy', 92, 'hm-float hm-blink') + '</div></header>' +
-      '<div class="cur-jump" role="tablist" aria-label="이동"><button type="button" class="cur-jb" data-to="cur-road">전체 과정</button><button type="button" class="cur-jb" data-to="cur-plan">내 수업계획서</button></div>';
+  function topHtml() {
+    return '<header class="cur-top"><div class="cur-top-t"><p class="cur-hi" id="cur-hi">안녕하세요</p><h1 class="cur-title">수업</h1><p class="cur-sum" id="cur-sum"></p></div>' +
+      '<button type="button" class="cur-link" id="cur-refresh">새로고침</button></header>' +
+      '<div id="cur-chipbox"></div>' +
+      '<section class="cur-sec cur-mapsec" id="cur-map" aria-label="수업 맵"><div id="cur-mapbody">' + SKELETON_MAP + '</div></section>' +
+      '<div class="cur-jump" aria-label="이동"><button type="button" class="cur-jb" data-to="cur-plan">내 수업계획서</button><button type="button" class="cur-jb" data-to="cur-road">전체 과정</button></div>';
   }
   function stageHtml(s, i) {
     var h = '<article class="cur-stage k-' + esc(s.kind) + '"><div class="cur-rail" aria-hidden="true"><span class="cur-dot">' + (i + 1) + '</span></div>' +
-      '<div class="cur-card"><div class="cur-st-top"><div><span class="cur-tag">' + esc(s.tag) + '</span><h3 class="cur-st-t">' + esc(s.title) + '</h3></div><span class="cur-st-m" aria-hidden="true">' + mas(s.mascot, 64, 'hm-float') + '</span></div>' +
+      '<div class="cur-card"><div class="cur-st-top"><span class="cur-tag">' + esc(s.tag) + '</span><h3 class="cur-st-t">' + esc(s.title) + '</h3></div>' +
       '<p class="cur-lead">' + esc(s.lead) + '</p><ul class="cur-pts">' + s.points.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
     if (s.flow) {
       h += '<div class="cur-flow"><p class="cur-flow-t">' + esc(s.flow.title) + '</p><ol>' + s.flow.steps.map(function (st) {
@@ -139,25 +184,27 @@
     return h + '</div></article>';
   }
   function roadHtml() {
-    return '<section class="cur-sec" id="cur-road" aria-labelledby="cur-road-h"><h2 id="cur-road-h">전체 과정</h2>' +
+    return '<section class="cur-sec" id="cur-road" aria-labelledby="cur-road-h"><h2 id="cur-road-h">전체 과정</h2><p class="cur-intro">' + esc(ROAD.intro) + '</p>' +
       '<div class="cur-subj" aria-label="과목">' + SUBJ.map(function (s) { return '<span class="cur-sj"><i style="background:' + s.c + '"></i>' + s.n + '</span>'; }).join('') + '</div>' +
       '<div class="cur-line">' + ROAD.stages.map(stageHtml).join('') + '</div>' +
       '<div class="cur-card cur-extra"><h3 class="cur-st-t sm">단계와 따로 쓰는 교재</h3>' + ROAD.extra.map(function (b) {
         return '<div class="cur-book"><b>' + esc(b.n) + '</b><span>' + esc(b.d) + (b.when ? ' · 쓰는 시기 ' + BLANK : '') + '</span></div>';
       }).join('') + '<p class="cur-note">교재 이름은 모두 WON 시리즈예요. 각 단계에서 쓰는 책은 위 카드에 있어요.</p></div></section>';
   }
+  var SKELETON_MAP = '<div class="cur-card cur-skelmap"><i class="a"></i><i class="b"></i><i class="c"></i></div>';
   var SKELETON_PLAN = '<div class="cur-skel"><i class="a"></i><i class="b"></i><i class="c"></i></div><p class="cur-loadmsg" role="status">내 수업계획서를 불러오는 중…</p>';
   function planShell(inner) {
-    return '<section class="cur-sec" id="cur-plan" aria-labelledby="cur-plan-h"><div class="cur-sec-h"><h2 id="cur-plan-h">내 수업계획서</h2><button type="button" class="cur-link" id="cur-refresh">새로고침</button></div><div id="cur-planbody">' + inner + '</div></section>';
+    return '<section class="cur-sec" id="cur-plan" aria-labelledby="cur-plan-h"><div class="cur-sec-h"><h2 id="cur-plan-h">내 수업계획서</h2></div><div id="cur-planbody">' + inner + '</div></section>';
   }
-  function stateCard(mascot, title, msg, btn) {
-    return '<div class="cur-card cur-state">' + mas(mascot, 84, 'hm-float') + '<p class="cur-state-t">' + esc(title) + '</p>' + (msg ? '<p class="cur-state-m">' + esc(msg) + '</p>' : '') + (btn ? '<button type="button" class="cur-btn" id="cur-retry">' + esc(btn) + '</button>' : '') + '</div>';
+  function stateCard(expr, fb, title, msg, btn) {
+    return '<div class="cur-card cur-state">' + charSlot(96, expr, fb) + '<p class="cur-state-t">' + esc(title) + '</p>' + (msg ? '<p class="cur-state-m">' + esc(msg) + '</p>' : '') + (btn ? '<button type="button" class="cur-btn" id="cur-retry">' + esc(btn) + '</button>' : '') + '</div>';
   }
 
   /* ---------- 서버에서 받기 ---------- */
   function load() {
     var g = ++gen;
     $('#cur-planbody').innerHTML = SKELETON_PLAN;
+    $('#cur-mapbody').innerHTML = SKELETON_MAP; $('#cur-map').hidden = false;
     var p;
     try { p = Promise.resolve(session.call('curriculum', {})); } catch (e) { p = Promise.resolve({ ok: false, error: '서버를 부를 수 없어요.' }); }
     return p.then(function (r) {
@@ -170,7 +217,8 @@
     }, function () { if (g === gen && root) showError('인터넷 연결을 확인하고 다시 시도해 주세요.'); });
   }
   function showError(msg) {
-    $('#cur-planbody').innerHTML = stateCard('m-cloud', '불러오지 못했어요', msg, '다시 불러오기');
+    $('#cur-chipbox').innerHTML = ''; $('#cur-map').hidden = true;
+    $('#cur-planbody').innerHTML = stateCard('base', 'm-cloud', '불러오지 못했어요', msg, '다시 불러오기');
     var b = $('#cur-retry'); if (b) b.onclick = load;
     setSummary(null);
   }
@@ -221,36 +269,137 @@
     return best;
   }
 
+  /* ---------- 수업 맵 ----------
+   * 반 하나의 「이번 달」(오늘이 든 달 → 없으면 다음 수업이 있는 달 → 없으면 회차가 있는 가장 최근 달) 회차(휴강 뺌)를 날짜순으로 칸에 놓음.
+   * 날짜 < 오늘 = 완료, 오늘 이후 첫 회차(오늘 포함) = 진행 중, 나머지 = 잠김. 「완강까지 N회 남음」 N = 전체 − 완료. 끝 칸 = 완강 보상. */
+  function mapMonthOf(c) {
+    var ym = todayIso().slice(0, 7), i;
+    for (i = 0; i < c.months.length; i++) if (c.months[i].month === ym && c.months[i].count) return c.months[i];
+    var nx = nextOf(c); if (nx && c.months[nx.mi].count) return c.months[nx.mi];
+    for (i = 0; i < c.months.length; i++) if (c.months[i].count) return c.months[i];
+    return null;
+  }
+  function mapModel(c) {
+    var m = mapMonthOf(c); if (!m) return null;
+    var t = todayIso(), nowSet = false, done = 0;
+    var nodes = m.items.filter(function (it) { return it.type === 'class'; }).map(function (it, i) {
+      var st;
+      if (it.pd && it.pd.iso < t) { st = 'done'; done++; }
+      else if (!nowSet) { st = 'now'; nowSet = true; }
+      else st = 'lock';
+      var rn = parseInt(it.round, 10);
+      return { it: it, st: st, no: isFinite(rn) && rn > 0 ? rn : i + 1 };
+    });
+    return { m: m, nodes: nodes, total: nodes.length, done: done, left: nodes.length - done };
+  }
+  /** 칸 위치: 3칸씩 아래에서 위로 지그재그(뱀 모양), 맨 끝이 완강 보상. 가로는 340 기준(%로 늘고 줄어듦) */
+  var MW = 340, XS = [64, 170, 276], ROWH = 112, PADT = 86, PADB = 52;
+  function mapGeom(n) {
+    var total = n + 1, rows = Math.ceil(total / 3), H = PADT + (rows - 1) * ROWH + PADB, pts = [];
+    for (var i = 0; i < total; i++) {
+      var r = Math.floor(i / 3), k = i % 3, col = r % 2 === 0 ? k : 2 - k;
+      pts.push({ x: XS[col], y: H - PADB - r * ROWH + (k === 1 ? 8 : 0) });
+    }
+    return { H: H, pts: pts };
+  }
+  function roadD(pts) {
+    if (!pts.length) return '';
+    var d = 'M' + pts[0].x + ' ' + pts[0].y;
+    for (var i = 1; i < pts.length; i++) {
+      var a = pts[i - 1], b = pts[i];
+      if (a.x === b.x) { var bx = a.x > MW / 2 ? a.x + 48 : a.x - 48; d += 'C' + bx + ' ' + a.y + ' ' + bx + ' ' + b.y + ' ' + b.x + ' ' + b.y; }
+      else { var mx = (a.x + b.x) / 2; d += 'C' + mx + ' ' + a.y + ' ' + mx + ' ' + b.y + ' ' + b.x + ' ' + b.y; }
+    }
+    return d;
+  }
+  function pctX(x) { return (x / MW * 100).toFixed(2) + '%'; }
+  function nodeLabel(nd) {
+    var it = nd.it, d = it.pd ? dateText(it.pd) + '(' + wd(it.pd.iso) + ')' : (it.rawDate || '날짜 미정');
+    return nd.no + '회 ' + d + (it.content ? ' ' + it.content : '') + ' — ' + (nd.st === 'done' ? '완료' : nd.st === 'now' ? '이번 회차' : '아직');
+  }
+  function mapHtml(c) {
+    var md = mapModel(c);
+    if (!md) return '';
+    var g = mapGeom(md.total), pts = g.pts, goal = pts[md.total], all = md.left === 0;
+    var nowI = -1; md.nodes.forEach(function (nd, i) { if (nd.st === 'now') nowI = i; });
+    var doneTo = all ? md.total : (nowI >= 0 ? nowI : md.done - 1);   // 초록 길은 지금 칸까지
+    var dRoad = roadD(pts), dDone = doneTo > 0 ? roadD(pts.slice(0, doneTo + 1)) : '';
+    var svg = '<svg class="cur-ln" viewBox="0 0 ' + MW + ' ' + g.H + '" preserveAspectRatio="none" aria-hidden="true">' +
+      '<path d="' + dRoad + '" transform="translate(0 6)" class="r-edge" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + dRoad + '" class="r-road" vector-effect="non-scaling-stroke"/>' +
+      '<path d="' + dRoad + '" class="r-dot" vector-effect="non-scaling-stroke"/>' +
+      (dDone ? '<path d="' + dDone + '" class="r-done" pathLength="100" vector-effect="non-scaling-stroke"/>' : '') + '</svg>';
+    var nodes = md.nodes.map(function (nd, i) {
+      var p = pts[i], bd = nd.st === 'done' ? '<i class="cur-bd">' + IC.check + '</i>' : nd.st === 'lock' ? '<i class="cur-bd">' + IC.lock + '</i>' : '';
+      return '<li class="cur-nd ' + nd.st + '" style="left:' + pctX(p.x) + ';top:' + p.y + 'px" title="' + esc(nodeLabel(nd)) + '"' + (nd.st === 'now' ? ' aria-current="step"' : '') + '><span class="cur-vh">' + esc(nodeLabel(nd)) + '</span><b aria-hidden="true">' + nd.no + '</b>' + bd + '</li>';
+    }).join('');
+    nodes += '<li class="cur-nd goal' + (all ? ' got' : '') + '" style="left:' + pctX(goal.x) + ';top:' + goal.y + 'px"><span class="cur-vh">' + (all ? '완강 보상 — 받았어요' : '완강 보상') + '</span><i class="cur-gi">' + IC.gift + '</i><span class="cur-cap">' + (all ? '완강!' : '완강 보상') + '</span></li>';
+    // 말풍선 + 내 몽글이
+    var extra = '', who;
+    if (nowI >= 0) {
+      var np = pts[nowI], nit = md.nodes[nowI].it, say = nit.pd ? (nit.pd.iso === todayIso() ? '오늘' : dateText(nit.pd) + '(' + wd(nit.pd.iso) + ')') : '다음';
+      extra += '<span class="cur-say" style="left:' + pctX(np.x) + ';top:' + (np.y - 33 - 34) + 'px">' + esc(say) + '</span>';
+      // 내 몽글이는 진행 중 칸 바로 옆(판 가운데 쪽)에 섬 — 길이 꺾이는 칸에서도 칸을 가리지 않게
+      who = { x: np.x + (np.x < MW / 2 ? 56 : -56), y: np.y + 16 };
+    } else who = { x: goal.x, y: goal.y - 30 };   // 완강: 보상 공 위에 올라섬
+    extra += '<div class="cur-me" style="left:' + pctX(who.x) + ';top:' + who.y + 'px">' + charSlot(50, all ? 'happy' : 'base', all ? 'm-party-happy' : 'm-rocket-happy') + '</div>';
+    var nowNd = nowI >= 0 ? md.nodes[nowI] : null, info;
+    if (nowNd) {
+      var it = nowNd.it;
+      info = '<div class="cur-nowc"><span class="cur-nowl">' + (it.pd && it.pd.iso === todayIso() ? '오늘 수업' : '다음 수업') + ' · <b class="num">' + nowNd.no + '</b>회' + (it.pd ? ' · <b class="num">' + dateText(it.pd) + '</b>(' + wd(it.pd.iso) + ')' : '') + '</span>' +
+        '<p class="cur-nowt">' + (it.content ? esc(it.content) : '<span class="cur-dim">내용 미정</span>') + '</p>' + (it.range ? '<p class="cur-rg"><span>범위</span>' + esc(it.range) + '</p>' : '') + '</div>';
+    } else info = '<div class="cur-nowc done"><span class="cur-nowl">' + esc(monthLabel(md.m.month).replace(/^\d+년 /, '')) + ' 수업</span><p class="cur-nowt">이번 달 수업을 다 들었어요</p></div>';
+    var sj = subjOf(c.name);
+    return '<div class="cur-card cur-mapc"><div class="cur-maph">' +
+      '<div class="cur-pills"><span class="cur-pw">' + (sj ? '<i class="cur-kdot" style="background:' + sj.c + '"></i>' : '') + esc((c.kind ? c.kind + '반 · ' : '') + c.name) + '</span><span class="cur-pw num">' + md.done + ' / ' + md.total + '</span></div>' +
+      '<p class="cur-mapm">' + esc(monthLabel(md.m.month)) + ' 수업 맵</p>' +
+      '<p class="cur-left">' + (all ? '완강했어요' : '완강까지 <span class="num">' + md.left + '</span>회 남음') + '</p>' +
+      '<div class="cur-prog" role="progressbar" aria-label="이번 달 들은 회차" aria-valuemin="0" aria-valuemax="' + md.total + '" aria-valuenow="' + md.done + '"><i style="width:' + (md.total ? (md.done / md.total * 100).toFixed(1) : 0) + '%"></i></div>' +
+      info + '</div>' +
+      '<div class="cur-path" style="height:' + g.H + 'px">' + svg + '<ol class="cur-nds" aria-label="' + esc(monthLabel(md.m.month)) + ' 회차 ' + md.total + '개">' + nodes + '</ol>' + extra + '</div></div>';
+  }
+
   /* ---------- 그리기 ---------- */
   function setSummary(cls) {
     var el = $('#cur-sum'), hi = $('#cur-hi');
     var nm = session && session.name ? String(session.name) : '';
     hi.textContent = nm ? '안녕하세요, ' + nm + '님' : '안녕하세요';
-    if (!cls || !cls.length) { el.textContent = ROAD.intro; return; }
+    if (!cls || !cls.length) { el.textContent = ''; el.hidden = true; return; }
+    el.hidden = false;
     var nx = null;
     cls.forEach(function (c) { var n = nextOf(c); if (n && (!nx || n.iso < nx.iso)) nx = { n: n, c: c }; });
     if (nx) {
       var d = nx.n.item.pd;
-      el.innerHTML = '다음 수업은 <b>' + dateText(d) + '(' + wd(d.iso) + ')</b> · ' + esc(nx.c.name) + (nx.n.item.content ? '<br><span class="cur-sum-s">' + esc(nx.n.item.content) + '</span>' : '');
+      el.innerHTML = '다음 수업은 <b>' + dateText(d) + '(' + wd(d.iso) + ')</b> · ' + esc(nx.c.name);
     } else el.textContent = '내 반 ' + cls.length + '개의 수업계획서를 모아 놨어요.';
   }
+  /** 처음 고를 반: 다음 수업이 가장 가까운 반 */
+  function firstCls(cls) {
+    var best = -1, bi = '';
+    cls.forEach(function (c, i) { var n = nextOf(c); if (n && (best < 0 || n.iso < bi)) { best = i; bi = n.iso; } });
+    return best < 0 ? 0 : best;
+  }
+  var picked = false;
   function render() {
     var cls = data || [];
-    if (!cls.length) { $('#cur-planbody').innerHTML = stateCard('m-cactus', '수강 중인 반이 없어요', '반이 정해지면 이곳에 수업계획서가 나타나요.'); setSummary(null); return; }
-    if (!cls.some(function (c) { return c.months.length; })) { $('#cur-planbody').innerHTML = stateCard('m-cloud-happy', '아직 올라온 수업계획서가 없어요', '선생님이 계획서를 올리면 이곳에서 볼 수 있어요.'); setSummary(cls); return; }
+    if (!cls.length) { $('#cur-chipbox').innerHTML = ''; $('#cur-map').hidden = true; $('#cur-planbody').innerHTML = stateCard('base', 'm-cactus', '수강 중인 반이 없어요', '반이 정해지면 이곳에 수업계획서가 나타나요.'); setSummary(null); return; }
+    if (!cls.some(function (c) { return c.months.length; })) { $('#cur-chipbox').innerHTML = ''; $('#cur-map').hidden = true; $('#cur-planbody').innerHTML = stateCard('base', 'm-cloud-happy', '아직 올라온 수업계획서가 없어요', '선생님이 계획서를 올리면 이곳에서 볼 수 있어요.'); setSummary(cls); return; }
+    if (!picked) { clsSel = firstCls(cls); picked = true; }
     if (clsSel >= cls.length) clsSel = 0;
     setSummary(cls);
-    var chips = cls.length > 1 ? '<div class="cur-chips" role="tablist" aria-label="내 반">' + cls.map(function (c, i) {
+    $('#cur-chipbox').innerHTML = cls.length > 1 ? '<div class="cur-chips" role="tablist" aria-label="내 반">' + cls.map(function (c, i) {
       var sj = subjOf(c.name);
       return '<button type="button" role="tab" class="cur-chip" data-i="' + i + '" aria-selected="' + (i === clsSel) + '">' + (sj ? '<i class="cur-kdot" style="background:' + sj.c + '"></i>' : '') + esc(c.name) + (c.time ? '<small>' + esc(c.time) + '</small>' : '') + '</button>';
     }).join('') + '</div>' : '';
-    $('#cur-planbody').innerHTML = chips + '<div id="cur-months"></div>';
     all('.cur-chip').forEach(function (b) { b.onclick = function () { clsSel = +b.getAttribute('data-i'); render(); }; });
+    var mh = mapHtml(cls[clsSel]);
+    $('#cur-map').hidden = !mh; $('#cur-mapbody').innerHTML = mh;
+    $('#cur-planbody').innerHTML = '<div id="cur-months"></div>';
     renderMonths(cls[clsSel]);
   }
   function renderMonths(c) {
     var t = todayIso(), nx = nextOf(c), key = c.code || String(clsSel);
-    if (!c.months.length) { $('#cur-months').innerHTML = stateCard('m-cloud-happy', '이 반의 수업계획서가 아직 없어요', ''); return; }
+    if (!c.months.length) { $('#cur-months').innerHTML = stateCard('base', 'm-cloud-happy', '이 반의 수업계획서가 아직 없어요', ''); return; }
     var sj = subjOf(c.name);
     var h = '<div class="cur-clsline k-' + esc(c.kind) + '">' + (sj ? '<i class="cur-kdot" style="background:' + sj.c + '"></i>' : '') + '<b>' + esc(c.name) + '</b>' + (c.kind ? '<span class="cur-tag sm">' + esc(c.kind) + '반</span>' : '') + (c.time ? '<span class="cur-meta">' + esc(c.time) + '</span>' : '') + '</div>';
     c.months.forEach(function (m, mi) {
@@ -284,7 +433,7 @@
           (goal ? '<div class="cur-goal"><span class="cur-lbl">강의 목표</span><p>' + esc(goal) + '</p></div>' : '') + (rows ? '<dl class="cur-dl">' + rows + '</dl>' : '') + '</div>';
       }
     } else h += '<p class="cur-none">이 달 계획서의 머리 정보(강의 목표 · 교재 등)는 아직 없어요.</p>';
-    if (!m.items.length) return h + '<div class="cur-state in">' + mas('m-cloud-happy', 64, 'hm-float') + '<p class="cur-state-m">이 달 회차가 아직 없어요.</p></div>';
+    if (!m.items.length) return h + '<div class="cur-state in">' + charSlot(72, 'base', 'm-cloud-happy') + '<p class="cur-state-m">이 달 회차가 아직 없어요.</p></div>';
     h += '<ol class="cur-rows">';
     m.items.forEach(function (it, i) {
       var past = it.pd && it.pd.iso < t, isNext = i === nextIdx, off = it.type === 'off';
@@ -304,23 +453,29 @@
     gen++;
     listeners.forEach(function (l) { l[0].removeEventListener(l[1], l[2], l[3]); }); listeners = [];
     if (root) { root.innerHTML = ''; root.classList.remove('cur'); }
-    root = null; session = null; opts = null; data = null; clsSel = 0; openM = {}; TODAY = '';
+    root = null; session = null; opts = null; data = null; clsSel = 0; openM = {}; TODAY = ''; charSt = null; picked = false;
   }
   function mount(rootEl, o) {
     if (!rootEl) throw new Error('HubCurriculum.mount: rootEl 이 없어요');
     if (root) unmount();
     opts = o || {}; session = opts.session;
     if (!session || typeof session.call !== 'function') throw new Error('HubCurriculum.mount: session(HubSession) 이 없어요');
-    root = rootEl; gen++; data = null; clsSel = 0; openM = {};
+    root = rootEl; gen++; data = null; clsSel = 0; openM = {}; charSt = null; picked = false;
     TODAY = /^\d{4}-\d{2}-\d{2}$/.test(opts.today || '') ? opts.today : '';
     if (window.HubMascots) window.HubMascots.mount();
+    try { if (window.HubMongle && window.HubMongle.mount) window.HubMongle.mount(); } catch (e) { /* */ }
     root.classList.add('cur');
-    root.innerHTML = heroHtml() + roadHtml() + planShell(SKELETON_PLAN);
+    root.innerHTML = topHtml() + planShell(SKELETON_PLAN) + roadHtml();
     all('.cur-jb').forEach(function (b) {
       b.onclick = function () { var el = document.getElementById(b.getAttribute('data-to')); if (el) el.scrollIntoView({ behavior: window.matchMedia && matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth', block: 'start' }); };
     });
     $('#cur-refresh').onclick = function () { load(); };
+    on(window, 'hub:char', function (e) {
+      var d = e && e.detail; if (!d) return;
+      charSt = { state: d.state || (charSt && charSt.state) || null, show: d.show !== undefined ? d.show : (charSt ? charSt.show : true) }; refreshChars();
+    });
     setSummary(null);
+    loadChar();
     load();
   }
   function refresh() { if (root) return load(); }

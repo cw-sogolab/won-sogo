@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   var root = null, gen = 0, opts = null, demo = false, apiUrl = '', env = 'dev';
-  var view = null, code = '', tok = '', kindSel = '', subjSel = '', wkSel = '', tmSel = '', tmKey = '', busy = false, pracList = null, TIPS = [];
+  var view = null, code = '', tok = '', kindSel = '', subjSel = '', wkSel = '', tmSel = '', tmKey = '', busy = false, pracList = null, TIPS = [], GID = 0;
   var timers = [], listeners = [];
 
   /* ---------- 작은 도우미 (api.js 의 UI 와 같은 동작, 전역을 안 씀) ---------- */
@@ -81,13 +81,30 @@
     '<div class="gr-demo" id="gr-demo" hidden>미리보기 모드예요. 실제 성적이 아니고, 사진도 저장되지 않아요.</div>' +
     '<section id="gr-login" class="gr-state" role="status"></section>' +
     '<section id="gr-app" hidden>' +
-      '<div class="gr-head"><div class="gr-who"><h1 class="title"><span id="gr-nm"></span>님의 성적</h1><p class="sub" id="gr-idshow"></p></div>' +
+      '<div class="gr-head"><div class="gr-who"><div class="gr-ttl"><h1 class="title">성적노트</h1><span class="gr-mg" id="gr-mg" aria-hidden="true" hidden></span></div>' +
+        '<p class="sub"><span id="gr-nm"></span>님 · <span id="gr-idshow"></span></p></div>' +
       '<button id="gr-refresh" class="linkbtn" type="button">새로고침</button></div>' +
       '<div id="gr-modes" class="seg modes" role="tablist" aria-label="보기"></div>' +
       '<div id="gr-tabs" class="tabsrow" role="tablist" aria-label="내 과목"></div>' +
       '<div id="gr-months" class="tabsrow months" aria-label="달"></div>' +
       '<div id="gr-panel"></div>' +
     '</section>';
+
+  /** 제목 옆 작은 몽글이 (허브에 HubMongle·HubSession.char 가 있을 때만, 캐릭터를 끈 학생은 안 그림). 공부 화면이라 움직임 없이 */
+  function drawMongle(d) {
+    var el = root && $('#gr-mg'); if (!el) return;
+    function paint(x) {
+      if (!root || !el.isConnected) return;
+      var st = x && (x.state || (x.data && x.data.state)), sh = x && (x.show !== undefined ? x.show : x.data && x.data.show);
+      if (!window.HubMongle || sh === false || (x && x.ok === false)) { el.innerHTML = ''; el.hidden = true; return; }
+      try { if (HubMongle.mount) HubMongle.mount(); el.innerHTML = HubMongle.svg(st || null, 36, { expr: 'base', anim: false, shadow: false }); el.hidden = false; }
+      catch (e) { el.innerHTML = ''; el.hidden = true; }
+    }
+    if (d) return paint(d);
+    if (!window.HubMongle || !window.HubSession || typeof HubSession.char !== 'function') { el.hidden = true; return; }
+    var g = gen;
+    Promise.resolve(HubSession.char()).then(function (r) { if (g === gen) paint(r); }, function () { el.hidden = true; });
+  }
 
   function showState(html) { $('#gr-login').innerHTML = html; $('#gr-login').hidden = false; $('#gr-app').hidden = true; }
   function showLoading() {
@@ -219,38 +236,58 @@
     if (!items.length) return '<p class="empty">아직 입력된 점수가 없어요.</p>';
     var series = []; items.forEach(function (it) { if (series.indexOf(it.s) < 0) series.push(it.s); });
     var n = items.length, fs = vw() > 860 ? 12 : 10;
-    var W = Math.max(svgBox(half), n * 46), H = fs === 12 ? 230 : 190, L = 34, R = 16, T = 14, B = fs * 4;
+    var W = Math.max(svgBox(half), n * 46), H = fs === 12 ? 230 : 190, L = 34, R = 26, T = 14, B = fs * 4;
     function x(i) { return n === 1 ? L + (W - L - R) / 2 : L + i * (W - L - R) / (n - 1); }
     function y(p) { return T + (100 - Math.min(100, p)) * (H - T - B) / 100; }
+    var gid = 'gr-g' + (++GID);
     var s = '<div class="chartwrap"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" style="min-width:' + Math.min(W, n * 40) + 'px" role="img" aria-label="시험별 정답률">';
     [0, 50, 100].forEach(function (g) {
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)"/>';
-      s += '<text x="' + (L - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round"/>';
+      s += '<text x="' + (L - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
     });
-    s += '<line class="guide" x1="0" x2="0" y1="' + T + '" y2="' + y(0) + '" stroke="var(--line)" stroke-width="1.5" style="display:none"/>';
+    s += '<line class="guide" x1="0" x2="0" y1="' + T + '" y2="' + y(0) + '" stroke="var(--line)" stroke-width="2" style="display:none"/>';
     items.forEach(function (it, i) {
       s += '<text x="' + x(i) + '" y="' + (H - fs * 2.2) + '" text-anchor="middle" font-size="' + fs + '" fill="var(--muted)">' + esc(it.lab) + '</text>';
-      if (it.m && (i === 0 || items[i - 1].m !== it.m)) s += '<text x="' + x(i) + '" y="' + (H - fs * 0.6) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="var(--ink2)">' + monthAxis(it.m) + '</text>';
+      if (it.m && (i === 0 || items[i - 1].m !== it.m)) s += '<text x="' + x(i) + '" y="' + (H - fs * 0.6) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="var(--ink2)">' + monthAxis(it.m) + '</text>';
     });
+    // 내 점수 선 아래 옅은 면 (계열이 하나일 때만 — 여러 과목이면 겹쳐 지저분함)
+    if (series.length === 1 && n > 1) {
+      var c1 = items[0].col;
+      s += '<defs><linearGradient id="' + gid + '" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="' + c1 + '" stop-opacity=".22"/><stop offset="1" stop-color="' + c1 + '" stop-opacity="0"/></linearGradient></defs>';
+      s += '<path d="M' + items.map(function (it, i) { return x(i) + ' ' + y(it.p); }).join('L') + 'L' + x(n - 1) + ' ' + y(0) + 'L' + x(0) + ' ' + y(0) + 'Z" fill="url(#' + gid + ')"/>';
+    }
     var cu = items.map(function (it, i) { return it.cum ? x(i) + ',' + y(it.cum.pct) : null; });
-    if (n > 1 && cu.filter(Boolean).length > 1) s += '<polyline points="' + cu.filter(Boolean).join(' ') + '" fill="none" stroke="var(--avg)" stroke-width="2" stroke-dasharray="5 4"/>';
-    items.forEach(function (it, i) { if (it.cum) s += '<circle cx="' + x(i) + '" cy="' + y(it.cum.pct) + '" r="3" fill="var(--avg)"/>'; });
+    if (n > 1 && cu.filter(Boolean).length > 1) s += '<polyline points="' + cu.filter(Boolean).join(' ') + '" fill="none" stroke="var(--avg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="5 6"/>';
+    items.forEach(function (it, i) { if (it.cum) s += '<circle cx="' + x(i) + '" cy="' + y(it.cum.pct) + '" r="2.5" fill="var(--avg)"/>'; });
+    var lastPt = null;
     series.forEach(function (key) {
       var pts = []; items.forEach(function (it, i) { if (it.s === key) pts.push([x(i), y(it.p), it, i]); });
       var col = pts[0][2].col;
       // 같은 과목끼리만 잇되, 사이에 다른 과목이 끼면 끊어서 그림
       var seg = [];
+      function line() { if (seg.length > 1) s += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>'; }
       pts.forEach(function (p, k) {
-        if (k && p[3] !== pts[k - 1][3] + 1) { if (seg.length > 1) s += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.5"/>'; seg = []; }
+        if (k && p[3] !== pts[k - 1][3] + 1) { line(); seg = []; }
         seg.push(p[0] + ',' + p[1]);
       });
-      if (seg.length > 1) s += '<polyline points="' + seg.join(' ') + '" fill="none" stroke="' + col + '" stroke-width="2.5"/>';
-      pts.forEach(function (p) { s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="4.5" fill="' + col + '"/>'; });
+      line();
+      pts.forEach(function (p) {
+        if (p[3] === n - 1) { lastPt = p; return; }
+        s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="5" fill="' + col + '" stroke="var(--surface)" stroke-width="2.5"/>';
+      });
     });
+    // 마지막(가장 최근) 점 강조 + 정답률 말풍선
+    if (lastPt) {
+      var lc = lastPt[2].col, lx = lastPt[0], ly = lastPt[1], lt = lastPt[2].p + '%', lw = 12 + lt.length * (fs * 0.62), bx = Math.max(2, Math.min(W - lw - 2, lx - lw / 2)), by = ly - 30 < 0 ? ly + 12 : ly - 30;
+      s += '<circle cx="' + lx + '" cy="' + ly + '" r="11" fill="' + lc + '" opacity=".18"/>';
+      s += '<circle cx="' + lx + '" cy="' + ly + '" r="7" fill="' + lc + '" stroke="var(--surface)" stroke-width="2.5"/>';
+      s += '<rect x="' + bx + '" y="' + by + '" width="' + lw + '" height="' + (fs + 7) + '" rx="' + ((fs + 7) / 2) + '" fill="var(--ink)"/>';
+      s += '<text x="' + (bx + lw / 2) + '" y="' + (by + fs + 1.5) + '" text-anchor="middle" font-size="' + fs + '" font-weight="800" fill="var(--surface)">' + lt + '</text>';
+    }
     var slot = n === 1 ? W - L - R : (W - L - R) / (n - 1);
     items.forEach(function (it, i) { s += hit(Math.max(0, x(i) - slot / 2), slot, H, it); });
     s += '</svg></div><div class="legend">';
-    series.forEach(function (key) { var c0 = items.filter(function (it) { return it.s === key; })[0].col; s += '<span><i style="border-top-color:' + c0 + '"></i>' + esc(series.length === 1 ? '내 정답률' : key) + '</span>'; });
+    series.forEach(function (key) { var c0 = items.filter(function (it) { return it.s === key; })[0].col; s += '<span><i style="background:' + c0 + '"></i>' + esc(series.length === 1 ? '내 정답률' : key) + '</span>'; });
     s += '<span><i class="a"></i>누적 평균</span><span class="hint">점에 마우스를 올리면(휴대폰은 누르면) 점수가 나와요</span>';
     return s + '</div>';
   }
@@ -263,22 +300,22 @@
     function y(p) { return T + (100 - Math.min(100, p)) * (H - T - B) / 100; }
     var s = '<div class="chartwrap"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="월말 정답률">';
     [0, 50, 100].forEach(function (g) {
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)"/>';
-      s += '<text x="' + (L - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round"/>';
+      s += '<text x="' + (L - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
     });
     var subs = [];
     items.forEach(function (it, i) {
       var cx = L + slot * i + slot / 2, top = y(it.p);
       if (subs.indexOf(it.s) < 0) subs.push(it.s);
-      s += '<rect x="' + (cx - bw / 2) + '" y="' + top + '" width="' + bw + '" height="' + (y(0) - top) + '" rx="6" fill="' + it.col + '"/>';
+      s += '<rect x="' + (cx - bw / 2) + '" y="' + top + '" width="' + bw + '" height="' + (y(0) - top) + '" rx="' + Math.min(10, bw / 3) + '" fill="' + it.col + '"/>';
       s += '<text x="' + cx + '" y="' + (top - 5) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="var(--ink2)">' + it.p + '</text>';
-      if (it.cum) s += '<line x1="' + (cx - bw / 2 - 6) + '" x2="' + (cx + bw / 2 + 6) + '" y1="' + y(it.cum.pct) + '" y2="' + y(it.cum.pct) + '" stroke="var(--ink2)" stroke-width="2" stroke-dasharray="4 3"/>';
+      if (it.cum) s += '<line x1="' + (cx - bw / 2 - 6) + '" x2="' + (cx + bw / 2 + 6) + '" y1="' + y(it.cum.pct) + '" y2="' + y(it.cum.pct) + '" stroke="var(--ink2)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 4"/>';
       s += '<text x="' + cx + '" y="' + (H - fs * 2.2) + '" text-anchor="middle" font-size="' + fs + '" fill="var(--muted)">' + esc(it.lab) + '</text>';
       s += '<text x="' + cx + '" y="' + (H - fs * 0.6) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="var(--ink2)">' + monthAxis(it.m) + '</text>';
       s += hit(L + slot * i, slot, H, it);
     });
     s += '</svg></div><div class="legend">' + subs.map(function (sj) { var c0 = items.filter(function (it) { return it.s === sj; })[0].col; return '<span><i class="sq" style="background:' + c0 + '"></i>' + esc(sj) + '</span>'; }).join('') +
-      '<span><i class="a" style="border-top-color:var(--ink2)"></i>누적 평균</span><span class="hint">막대에 마우스를 올리면(휴대폰은 누르면) 점수가 나와요</span></div>';
+      '<span><i class="a ink"></i>누적 평균</span><span class="hint">막대에 마우스를 올리면(휴대폰은 누르면) 점수가 나와요</span></div>';
     return s;
   }
   function itemsOf(list, seriesFn, labFn) {
@@ -356,7 +393,26 @@
     all('#gr-modes [data-mode]').forEach(function (b) { b.onclick = function () { kindSel = b.getAttribute('data-mode'); subjSel = ''; renderTabs(); }; });
   }
 
+  /* 그래프는 그릴 때의 칸 폭으로 크기를 정함 — 허브의 숨은 탭(display:none, 폭 0)에서 먼저 그려졌다가 보이게 되면
+   * 납작하게 남으므로, 칸 폭이 그린 때와 달라지면(0 → 실제 폭, 화면 회전 등) 다시 그림 (2026-11-26) */
+  var drawnW = -1, ro = null, roT = 0;
+  function watchSize() {
+    if (!window.ResizeObserver || !root) return;
+    ro = new ResizeObserver(function () {
+      var w = root ? root.clientWidth : 0;
+      if (!w || !view || Math.abs(w - drawnW) < 24) return;
+      clearTimeout(roT);
+      roT = setTimeout(function () {
+        if (!root || !view || $('#gr-app').hidden || $('#gr-panel .up') || busy) return;   // 사진·기출 입력 중이면 그대로 둠
+        var a = document.activeElement; if (a && root.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+        var y = getY(); renderTabs(); setY(y);
+      }, 120);
+    });
+    ro.observe(root);
+  }
+
   function renderTabs() {
+    drawnW = root ? root.clientWidth : 0;
     var ms = modesHave();
     $('#gr-months').innerHTML = '';
     if (!ms.length) { $('#gr-modes').innerHTML = ''; $('#gr-tabs').innerHTML = ''; $('#gr-panel').innerHTML = '<div class="card blank"><p class="empty">아직 등록된 반이 없어요. 선생님께 말씀해 주세요.</p></div>'; return; }
@@ -391,7 +447,12 @@
 
   /** noWrong: 개념반 월말테스트는 틀린 문항을 안 보여 줌 (2026-10-22 사용자). 단풀반 월말은 보여 줌 (2026-10-31 사용자).  prac: 단풀반 EJU 기출 — 아직 안 냈으면 이 줄 안에서 바로 답안 입력 (2026-10-26 사용자) */
   function testItem(t, extra, noDate, noWrong, prac) {
-    var h = '<div class="item"><div class="row"><b>' + esc(t.label) + (extra ? ' <span class="meta">' + esc(extra) + '</span>' : '') + '</b>' +
+    // 시안 ②: 이름 아래 작은 줄에 날짜 · 등수, 오른쪽에 점수 크게
+    var sub = [];
+    if (!noDate && t.date) sub.push('<span>' + esc(dateLabel(t.date)) + '</span>');
+    if (t.rank) sub.push('<span class="rk">' + t.rank + '등<em>/ ' + t.n + '명</em></span>');
+    var h = '<div class="item"><div class="row"><div class="tt"><b>' + esc(t.label) + (extra ? ' <span class="meta">' + esc(extra) + '</span>' : '') + '</b>' +
+      (sub.length ? '<p class="meta">' + sub.join('') + '</p>' : '') + '</div>' +
       (t.score === null ? '<span class="pills"><span class="pill wait">아직 입력 전</span>' + (prac ? '<button class="btn sm" type="button" data-prac="' + esc(prac) + '">입력하기</button>' : '') + '</span>'
         : '<span class="score">' + t.score + '<small> / ' + t.total + '</small></span>') + '</div>';
     // 한 줄로 길게 늘어놓지 않고 작은 칸으로 (2026-10-22 사용자: 가독성)
@@ -399,11 +460,9 @@
     function st(lbl, val, sub, cls) { return '<div class="st' + (cls ? ' ' + cls : '') + '"><span>' + lbl + '</span><b>' + val + '</b>' + (sub ? '<em>' + sub + '</em>' : '') + '</div>'; }
     var cells = [];
     if (my !== null) cells.push(st('정답률', my + '%', '', av !== null ? (my >= av ? 'sgood' : 'sbad') : ''));
-    if (t.rank) cells.push(st('등수', t.rank + '등', t.n + '명 중'));
     if (av !== null && my !== null) cells.push(st('우리반 평균', av + '%', my !== null ? (my - av >= 0 ? '+' : '') + Math.round((my - av) * 10) / 10 + '%p' : ''));
     if (t.cum && my !== null) cells.push(st('누적 평균', t.cum.pct + '%', t.cum.n + '명'));   // 내가 아직 안 본 시험에는 안 붙임 (2026-10-26 사용자)
     if (t.conv !== null) cells.push(st('환산점수', t.conv, t.convAvg !== null ? '우리반 평균 ' + Math.round(t.convAvg) : ''));
-    if (!noDate && t.date) h += '<p class="meta">' + esc(dateLabel(t.date)) + '</p>';
     if (cells.length) h += '<div class="stats">' + cells.join('') + '</div>';
     if (!noWrong) h += wrongBlock(t);
     if (prac && t.score === null) h += '<div class="upbox"></div>';
@@ -459,16 +518,16 @@
     function y(p) { return T + (100 - Math.min(100, p)) * (H - T - B) / 100; }
     var s = '<div class="chartwrap"><svg class="chart" viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="달마다 개념반·단풀반 월말 정답률">';
     [0, 50, 100].forEach(function (g) {
-      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)"/>';
-      s += '<text x="' + (L - 6) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
+      s += '<line x1="' + L + '" x2="' + (W - R) + '" y1="' + y(g) + '" y2="' + y(g) + '" stroke="var(--line)" stroke-width="1.5" stroke-linecap="round"/>';
+      s += '<text x="' + (L - 8) + '" y="' + (y(g) + 4) + '" text-anchor="end" font-size="' + fs + '" fill="var(--muted)">' + g + '</text>';
     });
     rows.forEach(function (r, i) {
       var cx = x0s + slot * i + slot / 2, x0 = cx - bw * k / 2 - (k - 1) * 2;
       kinds.forEach(function (kd, j) {
         var v = r.vals[kd]; if (v === null || v === undefined) return;
         var x = x0 + j * (bw + 4), top = y(v), lst = r.by[kd], ca = cumAvg(lst);
-        s += '<rect x="' + x + '" y="' + top + '" width="' + bw + '" height="' + (y(0) - top) + '" rx="5" fill="' + toneOf(kd, sj) + '"/>';
-        if (ca !== null) s += '<line x1="' + (x - 3) + '" x2="' + (x + bw + 3) + '" y1="' + y(ca) + '" y2="' + y(ca) + '" stroke="var(--ink2)" stroke-width="2" stroke-dasharray="4 3"/>';
+        s += '<rect x="' + x + '" y="' + top + '" width="' + bw + '" height="' + (y(0) - top) + '" rx="' + Math.min(10, bw / 3) + '" fill="' + toneOf(kd, sj) + '"/>';
+        if (ca !== null) s += '<line x1="' + (x - 3) + '" x2="' + (x + bw + 3) + '" y1="' + y(ca) + '" y2="' + y(ca) + '" stroke="var(--ink2)" stroke-width="2.5" stroke-linecap="round" stroke-dasharray="4 4"/>';
         s += hit(x - 2, bw + 4, H, { title: kd + '반 ' + lst[0].t.label, m: r.m, p: v, col: toneOf(kd, sj), sc: lst.length === 1 ? lst[0].t.score : undefined, tot: lst.length === 1 ? lst[0].t.total : undefined,
           av: lst.length === 1 ? lst[0].t.avg : null, cum: ca === null ? null : { pct: ca } });
         s += '<text x="' + (x + bw / 2) + '" y="' + (top - 4) + '" text-anchor="middle" font-size="' + (fs - 1) + '" font-weight="700" fill="var(--ink2)">' + v + '</text>';
@@ -476,7 +535,7 @@
       s += '<text x="' + cx + '" y="' + (H - fs * 0.8) + '" text-anchor="middle" font-size="' + fs + '" font-weight="700" fill="var(--ink2)">' + monthAxis(r.m) + '</text>';
     });
     s += '</svg></div><div class="legend">' + kinds.map(function (kd) { return '<span><i class="sq" style="background:' + toneOf(kd, sj) + '"></i>' + kd + '반 월말</span>'; }).join('') +
-      '<span><i class="a" style="border-top-color:var(--ink2)"></i>누적 평균</span><span class="hint">막대에 마우스를 올리면(휴대폰은 누르면) 점수가 나와요</span></div>';
+      '<span><i class="a ink"></i>누적 평균</span><span class="hint">막대에 마우스를 올리면(휴대폰은 누르면) 점수가 나와요</span></div>';
     return s;
   }
 
@@ -575,7 +634,8 @@
       return '<button type="button" class="tab" data-tm="' + m + '" aria-selected="' + (m === tmSel) + '">' + esc(monthShort(m)) + '</button>';
     }).join('') + '</div></div>' : '';
     function hwCard(k, list) {
-      var w = '<div class="card"><h2>' + (real ? '' : '<i class="kdot" style="background:' + toneOf(k, s) + '"></i>') + '숙제</h2>';
+      var nd = list.filter(function (x) { return x.done; }).length;
+      var w = '<div class="card"><h2>' + (real ? '' : '<i class="kdot" style="background:' + toneOf(k, s) + '"></i>') + '숙제<span class="hwn" aria-label="제출 ' + nd + '개 / 전체 ' + list.length + '개"><b>' + nd + '</b> / ' + list.length + '</span></h2>';
       byMonth(list, function (x) { return x.month; }).forEach(function (g) { w += '<h3 class="mhd">' + esc(g.m ? monthLabel(g.m) : '') + '</h3>' + g.l.map(function (x) { return hwItem(x, s); }).join(''); });
       return w + '</div>';
     }
@@ -839,6 +899,7 @@
   function unmount() {
     gen++;
     timers.forEach(clearInterval); timers = [];
+    if (ro) { ro.disconnect(); ro = null; } clearTimeout(roT); drawnW = -1;
     listeners.forEach(function (l) { l[0].removeEventListener(l[1], l[2], l[3]); }); listeners = [];
     if (root) { root.innerHTML = ''; root.classList.remove('gr'); }
     root = null; opts = null; view = null; code = ''; tok = ''; pracList = null; TIPS = [];
@@ -861,7 +922,10 @@
     $('#gr-refresh').onclick = function () { if (code) login(true); };
     ['click', 'touchstart', 'keydown', 'scroll'].forEach(function (ev) { on(window, ev, function () { lastTouch = Date.now(); }, { passive: true, capture: true }); });
     on(document, 'visibilitychange', function () { if (!document.hidden) poll(); });
+    on(window, 'hub:char', function (e) { drawMongle(e && e.detail ? e.detail : null); });
+    drawMongle();
     timers.push(setInterval(poll, POLL_MS));
+    watchSize();
     if (!code) { showError('번호가 없어요. 다시 로그인해 주세요.'); return; }
     firstLoad();
   }

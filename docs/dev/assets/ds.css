@@ -1,0 +1,46 @@
+/* 허브 공통 디자인 토큰 (2026-11-26, 최종 시안 sian-final = B 3D 클레이 + 보상 순간에만 J).
+ * 모든 탭 모듈(.gr .qz .cur .qna .ga .home …)은 색·그림자·글꼴을 여기 변수로만 쓴다. 직접 색 코드를 박지 않는다.
+ * 다크 모드: 허브가 <html data-theme="light|dark"> 를 정함(설정 「자동」이면 기기 설정을 따름). */
+:root{
+  color-scheme:light;
+  --bg:#F3F2FA; --card:#fff; --ink:#1E1B3A; --sub:#6B6885; --body:#4B4868; --line:#ECEAF6; --line2:#F1F0F7; --track:#E9E7F4; --soft:#F5F4FA; --hover:#F6F5FF; --tabtx:#77748F;
+  --lav:#BDAEFF; --peach:#FFBFA3; --mint:#A3ECCF; --sky:#ABD9FF; --butter:#FFE582;
+  --pt:#5B5BFF; --pt-d:#3F3FD6; --pt-l:#ECEBFF; --ok:#0F7A55; --ok-l:#DDF8EC; --ok-bg:#E8FBF3; --gold:#FFB81F; --star:#B26F00;
+  --ing-b:#FFF1BF; --ing-t:#7A4E00; --yet-b:#EDEBF6; --yet-t:#5F5C7A; --no-b:#FFE3DE; --no-t:#B92D1A; --warn:#D9432E;
+  --tag-b:#E3F3FF; --tag-t:#1D5FA8; --chip-b:#FFE9EE; --chip-t:#C2264B;
+  --hero:radial-gradient(circle at 86% 14%,rgba(255,255,255,.9) 0,rgba(255,255,255,0) 34%),linear-gradient(165deg,#ECE6FF 0%,#DCEAFF 100%);
+  --tile:linear-gradient(160deg,#F1EDFF,#DCD3FF); --tile-sh:inset 0 -4px 6px rgba(91,67,201,.16),inset 0 3px 3px rgba(255,255,255,.9);
+  --bezel:#fff; --bezel-o:#E3E0F2; --chrome:#F8F7FD; --glass:rgba(255,255,255,.88);
+  --ped:radial-gradient(ellipse at 38% 26%,#fff 0,#F4F1FF 55%,#DDD6FA 100%); --ped-s:#CEC6F4;
+  --no-ball:radial-gradient(circle at 34% 26%,#fff 0,#EFEDF7 50%,#D9D5EA 100%); --no-ball-s:#C9C4DF;
+  --lock-ball:radial-gradient(circle at 34% 26%,#fff 0,#F0EEF8 45%,#DAD6EA 100%); --lock-s:#C4BFDB; --lock-t:#77748F;
+  --road-edge:#D6D0EE; --road:#fff; --road-dot:#DAD6EA; --avg:#A9A5C4;
+  --sh:0 18px 36px -14px rgba(76,62,160,.24),0 4px 10px -6px rgba(76,62,160,.12);
+  --sh-s:0 10px 22px -12px rgba(76,62,160,.28),0 2px 6px -3px rgba(76,62,160,.10);
+  --sh-big:0 54px 70px -32px rgba(76,62,160,.42),0 22px 30px -18px rgba(76,62,160,.2);
+  /* 보상 순간(J): 인디고 · 라임 · 핑크 · 검은 낙서 */
+  --j-bg:#4A3AFF; --j-bg-d:#2B1EC2; --j-lime:#C6F432; --j-lime-d:#7A9C00; --j-pink:#FF6AD5; --j-ink:#0B0B14;
+  --spring:cubic-bezier(.3,1.45,.5,1);
+  --f:"Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo","Hiragino Sans",sans-serif;
+  --fn:"M PLUS Rounded 1c","Pretendard Variable",Pretendard,"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  --f-an:"Anton","Bebas Neue",Impact,"Arial Narrow",sans-serif;
+  --f-han:"Black Han Sans","Pretendard Variable",Pretendard,sans-serif;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#121120; --card:#1E1C31; --ink:#F2F1FA; --sub:#A9A6C6; --body:#CFCDE3; --line:#2D2B46; --line2:#272540; --track:#2B2945; --soft:#18172A; --hover:#26243F; --tabtx:#9693B3;
+  --pt:#7C7CFF; --pt-d:#B9B9FF; --pt-l:#2B2A5E; --ok:#5FDFAA; --ok-l:#123B2D; --ok-bg:#132D27; --star:#FFC94D;
+  --ing-b:#3A3114; --ing-t:#FFD66B; --yet-b:#2A2842; --yet-t:#B9B6D3; --no-b:#41201C; --no-t:#FF9B8A; --warn:#FF7A66;
+  --tag-b:#1C3550; --tag-t:#9CCBFF; --chip-b:#4A1D2B; --chip-t:#FFA3BC;
+  --hero:radial-gradient(circle at 86% 14%,rgba(170,160,255,.20) 0,rgba(170,160,255,0) 34%),linear-gradient(165deg,#2A2552 0%,#1C2846 100%);
+  --tile:linear-gradient(160deg,#352F66,#27224E); --tile-sh:inset 0 -4px 6px rgba(0,0,0,.3),inset 0 3px 3px rgba(255,255,255,.08);
+  --bezel:#26243B; --bezel-o:#36344F; --chrome:#1A1930; --glass:rgba(30,28,49,.88);
+  --ped:radial-gradient(ellipse at 38% 26%,#4D477C 0,#383264 55%,#28234C 100%); --ped-s:#1A1736;
+  --no-ball:radial-gradient(circle at 34% 26%,#4A4768 0,#363452 50%,#28263F 100%); --no-ball-s:#141326;
+  --lock-ball:radial-gradient(circle at 34% 26%,#555277 0,#3D3A5E 45%,#2C2A47 100%); --lock-s:#141326; --lock-t:#B9B6D3;
+  --road-edge:#0D0C19; --road:#2A2843; --road-dot:#4A4770; --avg:#7A7799;
+  --sh:0 18px 36px -14px rgba(0,0,0,.65),0 4px 10px -6px rgba(0,0,0,.45);
+  --sh-s:0 10px 22px -12px rgba(0,0,0,.7),0 2px 6px -3px rgba(0,0,0,.4);
+  --sh-big:0 54px 70px -32px rgba(0,0,0,.75),0 22px 30px -18px rgba(0,0,0,.5);
+  --j-bg:#3626E0; --j-bg-d:#1C1290;
+}

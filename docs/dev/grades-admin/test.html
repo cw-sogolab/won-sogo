@@ -7,16 +7,16 @@
 <meta name="robots" content="noindex">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="stylesheet" href="../assets/ds.css">
 <link rel="stylesheet" href="../grades-native/gr.css">
 <link rel="stylesheet" href="ga.css">
 <style>
 /* 허브 틀 흉내: 바탕색만 가진 빈 페이지. ?clash 로 열면 일부러 전역 규칙을 심어 .ga 가 흔들리는지 확인 */
 html,body{margin:0}
-body{background:#F5F3FF;font-family:sans-serif}
-@media (prefers-color-scheme: dark){body{background:#14122B;color:#fff}}
+body{background:var(--bg);color:var(--ink);font-family:var(--f)}
 .bar{padding:10px 16px;font:600 13px sans-serif;background:#ff6a3d;color:#fff}
 .bar a{color:#fff;margin-left:10px}
-.login{max-width:360px;margin:60px auto;padding:24px;background:#fff;border-radius:20px;font:15px sans-serif}
+.login{max-width:360px;margin:60px auto;padding:24px;background:var(--card);border-radius:20px;font:15px var(--f)}
 .login input{width:100%;padding:10px;margin:8px 0;box-sizing:border-box}
 body.clash button{background:red;border-radius:0}
 .clash .card{padding:0;background:yellow}
@@ -35,9 +35,11 @@ body.clash *{font-family:serif}
 </div>
 <div id="root"></div>
 <script>
+/* 허브 흉내: 테마는 <html data-theme> (?theme=light|dark, 없으면 기기 설정). ?tab=hw 처럼 주면 그 탭을 열어 둠(렌더 확인용) */
 var Q = new URLSearchParams(location.search), DEMO = Q.has('demo');
+document.documentElement.setAttribute('data-theme', Q.get('theme') || (matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'));
 if (Q.has('clash')) document.body.classList.add('clash');
-['../../assets/config.js'].concat(DEMO ? ['../assets/core.js', '../assets/logic.js', '../assets/mock.js'] : []).forEach(function (s) { document.write('<script src="' + s + '"><\/script>'); });
+['../../assets/config.js', '../assets/mongle.js'].concat(DEMO ? ['../assets/core.js', '../assets/logic.js', '../assets/mock.js'] : []).forEach(function (s) { document.write('<script src="' + s + '"><\/script>'); });
 </script>
 <script src="../hub-session.js"></script>
 <script src="ga.js"></script>
@@ -75,6 +77,21 @@ function login(pw) {
 document.getElementById('go').onclick = function () { login(document.getElementById('pw').value.trim()); };
 document.getElementById('pw').onkeydown = function (e) { if (e.key === 'Enter') document.getElementById('go').click(); };
 if (DEMO) login('demo'); else document.getElementById('login').hidden = false;
+/* 렌더 확인용 순서 동작: ?tab=entry&do=click:[data-es="경제"]&do=set:#ga-stIn=가나&do=click:#ga-roster tr.click — 요소가 생길 때까지 기다렸다가 차례로 */
+(function steps() {
+  var list = (Q.get('tab') ? ['click:#ga-nav [data-t="' + Q.get('tab') + '"]'] : []).concat(Q.getAll('do'));
+  (function next(i, n) {
+    if (i >= list.length) return;
+    var st = list[i], kind = st.slice(0, st.indexOf(':')), rest = st.slice(st.indexOf(':') + 1), sel = rest, val = '';
+    if (kind === 'set') { sel = rest.slice(0, rest.indexOf('=')); val = rest.slice(rest.indexOf('=') + 1); }
+    if (kind === 'wait') return setTimeout(function () { next(i + 1, 0); }, +rest || 300);
+    var el = document.querySelector(sel);
+    if (!el) return setTimeout(function () { n < 40 ? next(i, n + 1) : next(i + 1, 0); }, 50);   // 끝내 없으면 건너뜀
+    if (kind === 'click') el.click();
+    else if (kind === 'set') { el.value = val; el.dispatchEvent(new Event('input', { bubbles: true })); el.dispatchEvent(new Event('change', { bubbles: true })); }
+    setTimeout(function () { next(i + 1, 0); }, 200);
+  })(0, 0);
+})();
 if (Q.has('unmount')) setTimeout(function () { HubGradesAdmin.unmount(); document.getElementById('root').innerHTML = '<p style="padding:20px">unmount 됨 — 1초 뒤 다시 mount</p>'; setTimeout(go, 1000); }, 3000);
 </script>
 </body>

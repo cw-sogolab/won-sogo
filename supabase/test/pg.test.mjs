@@ -17,6 +17,7 @@ const db = new PGlite();
 await db.exec('create schema storage; create table storage.buckets(id text primary key, name text, public boolean);');
 await db.exec(fs.readFileSync(new URL('../migrations/001_grades.sql', import.meta.url), 'utf8'));
 await db.exec(fs.readFileSync(new URL('../migrations/002_qna.sql', import.meta.url), 'utf8'));
+await db.exec(fs.readFileSync(new URL('../migrations/003_char.sql', import.meta.url), 'utf8'));
 const q = async (t, p) => (await db.query(t, p)).rows;
 const tx = async fn => { await db.query('begin'); try { const r = await fn(q); await db.query('commit'); return r; } catch (e) { await db.query('rollback'); throw e; } };
 const Q = s => '"' + s + '"';
@@ -25,6 +26,12 @@ for (const t of Object.keys(Logic.TABLES)) for (const r of seed._tables[t]) {
   const c = Logic.TABLES[t];
   await q(`insert into public.${Q(t)}(${c.map(Q).join(',')}) values(${c.map((_, i) => '$' + (i + 1)).join(',')})`, c.map(h => String(r[h] ?? '')));
 }
+// 읽기 전용 퇴근 미션 기록(시각은 timestamptz — 한국 시각으로 넣음)·미리보기 접속기록도 같은 내용으로
+for (const r of seed._tables['퀴즈기록']) {
+  const c = Logic.READONLY['퀴즈기록'];
+  await q(`insert into public."퀴즈기록"(${c.map(Q).join(',')}) values($1::timestamptz,${c.slice(1).map((_, i) => '$' + (i + 2)).join(',')})`, [r['시각'] + ':00+09'].concat(c.slice(1).map(h => String(r[h] ?? ''))));
+}
+for (const r of seed._log) await q(`insert into public."접속기록"(${Logic.ACCESS_HEAD.map(Q).join(',')}) values(${Logic.ACCESS_HEAD.map((_, i) => '$' + (i + 1)).join(',')})`, Logic.ACCESS_HEAD.map(h => String(r[h] ?? '')));
 await q("insert into public.kv_props(k,v) values('ADMIN_PASSWORD','demo'),('SHOW_KEY','N')");
 const files = new Map(); const removed = [];
 seq = 0;
@@ -129,7 +136,25 @@ const [qc, qd] = await pair('qnaAsk', i => ask(i, { photos: [{ b64: JPG }] }), '
 { const [a, b] = await pair('qnaDelete', i => ({ tok: tok[i], id: 'QDEMO1' }), 'QnA 답변 달린 질문은 학생이 못 지움'); assert.ok(!a.ok && !b.ok); }
 { const [a, b] = await pair('qnaAdminDelete', i => ({ token: T[i], id: qid[i] }), 'QnA 강사 삭제'); assert.ok(a.ok && b.ok); }
 { const [a, b] = await pair('qnaAdminList', i => ({ token: 'wrong' }), 'QnA 강사 열쇠 없이 거절'); assert.ok(!a.ok && !b.ok); }
-// 접속기록
+// 몽글이 꾸미기 (2026-11-26): 퀴즈기록(읽기 전용)·학생별 접속기록을 읽어 계산한 결과가 두 쪽 같음
+{ const [a] = await raw('charGet', i => ({ tok: tok[i] }));
+  assert.ok(a.ok && a.data.items.length === 24 && a.data.star > 0, '꾸미기 목록·별');
+  assert.ok(a.data.items.find(x => x.kind === 'body' && x.id === 'sky').owned, '퀴즈기록 날짜 + 접속기록 날짜로 7일 연속'); }
+await both('charSet', i => ({ tok: tok[i], body: 'sky', hat: 'beanie', glasses: 'sun', charm: 'heart' }), '꾸미기 입기');
+{ const [a, b] = await raw('charSet', i => ({ tok: tok[i], hat: 'crown' })); assert.ok(!a.ok && !b.ok && b.error === '아직 얻지 못한 아이템이에요', '못 얻은 아이템 거절'); }
+await both('charSet', i => ({ tok: tok[i], show: false }), '꾸미기 끄기');
+await both('charGet', i => ({ tok: tok[i] }), '끈 뒤 charGet');
+await both('charSet', i => ({ tok: tok[i], body: 'mint', show: true }), '꾸미기 켜기·바꾸기');
+{ let thrown = ''; try { await pg.run('x', {}, { fn: env => env.store.append('퀴즈기록', { '번호': 'X' }) }); } catch (e) { thrown = e.message; }
+  assert.ok(/읽기만/.test(thrown), '퀴즈기록은 서버 규칙에서 쓸 수 없음'); console.log('  ok  퀴즈기록 쓰기 거절'); }
+// 전부 열기(시험용)
+mem._props.CHAR_UNLOCK_ALL = 'Y'; await q("insert into public.kv_props(k,v) values('CHAR_UNLOCK_ALL','Y')");
+{ const [a] = await raw('charGet', i => ({ tok: tok[i] })); assert.ok(a.data.items.every(x => x.owned), 'CHAR_UNLOCK_ALL=Y'); }
+await both('charSet', i => ({ tok: tok[i], hat: 'crown' }), '전부 열기 때 희귀 입기');
+delete mem._props.CHAR_UNLOCK_ALL; await q("delete from public.kv_props where k='CHAR_UNLOCK_ALL'");
+// 접속기록 (강사 요약 — pgstore 가 Code.gs·미리보기와 같은 {시각,번호,…} 줄을 돌려줌)
+await both('accessLog', withTok({ code: 'KM482919' }), '강사 접속기록 요약');
+{ const r = await pg.run('accessLog', { token: T[1], code: 'KM482919' }, {}); assert.ok(r.data.sum.KM482919 && r.data.rows.length >= 3, '접속기록 요약이 비지 않음'); }
 await both('adminLogin', { password: 'nope', dev: 'x' }, '틀린 비밀번호');
 // 최종 표 비교
 for (const t of Object.keys(Logic.TABLES)) {
